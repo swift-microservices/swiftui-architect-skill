@@ -20,7 +20,7 @@ The app is built from local Swift packages: one per feature, plus the shared pac
 
 A feature is a capability the user would name: finding something to watch (Discover), looking up a movie and the people in it (Catalog), searching (Search), keeping a watchlist (Watchlist), signing in (Account). It owns that capability's models, services and every screen of it, however many there are. A capability with one screen, such as signing in, is still a feature.
 
-- Name it for what the user does there, never for a screen, a tab or a model other features show: `Catalog`, not `MovieDetail`, `Home` or `Movie`.
+- Name it for the capability, never for a screen, a tab that gathers several capabilities or a model other features show: `Catalog`, not `MovieDetail`, `Home` or `Movie`. A tab that shows one capability shares the feature's name (`Discover`, `Watchlist`).
 - Service protocols and view models are per screen inside a feature's targets; a screen never gets a package.
 
 Decide a boundary by change and meaning:
@@ -28,14 +28,19 @@ Decide a boundary by change and meaning:
 - **Separate features** when each part changes for its own reasons: Discover changes with what the app recommends, Search with how queries and filters work.
 - **Separate types** when a noun means something else in each part. To Catalog a movie's genres are labels on its details (`genres: [String]`); to Discover a genre is a place with its own paged movies (`Genre`).
 
-Then check what a split costs. Between features cross only ids, through destinations; narrow questions, through [ports](domain.md#cross-feature-services-consumer-owned-ports), as Catalog asks Watchlist whether a movie is kept; and the shared vocabulary, through [the shared package](#shared-sharedui-and-sharedlive). A split that needs more than that, such as one side's own types or a port for most of what the other does, is one feature.
+Then check what a split costs. Only three things cross between features:
+- IDs, through destinations
+- narrow questions, through [ports](domain.md#cross-feature-services-consumer-owned-ports), as Catalog asks Watchlist whether a movie is kept
+- the shared vocabulary, through [the shared package](#shared-sharedui-and-sharedlive)
+
+A split that needs more, such as one side's own types or a port for most of what the other does, is one feature.
 
 - A screen that shows several features' data belongs to the feature whose capability it serves, and asks the others through ports: a movie's details show whether the movie is kept.
 - Merge two features when most changes touch both, or when their ports keep growing. Split one when its parts share no types, change for different reasons and could stand alone, such as a `Home` package holding everything the first tab shows.
 
 Avoid:
 - A package per screen (`MovieDetail`, `MovieCast`). It splits one model across packages, so features import each other or the shared package grows.
-- A package per tab (`Home`), or per model other features show (`Movie`, `Person`, `Genre`). Every screen shows several such models, so their packages would import each other, which features never do.
+- A package per tab that gathers several capabilities (`Home`), or per model other features show (`Movie`, `Person`, `Genre`). Every screen shows several such models, so their packages would import each other, which features never do.
 - A package per layer (`Models`, `Services`, `Views`) that every feature shares.
 - Moving a model to the shared package to avoid a port ([the promotion rule](#shared-sharedui-and-sharedlive)).
 
@@ -48,7 +53,7 @@ Each feature is one package with four targets:
 | `XCore` | Domain models, `XError`, a service protocol and mock per screen, ports | `Shared` |
 | `XUI` | View models, views, `XDestination`, `Localizable.xcstrings`, display mappings | `XCore`, `Shared`, `SharedUI`, `DesignSystem` |
 | `XLive` | Live services, mapping API responses and errors to the domain | `XCore`, `Shared`, `SharedLive`, `Networking` |
-| `XTests` | View model and mapping tests (Swift Testing) | all of the above, plus `Networking` for response fixtures |
+| `XTests` | View model and mapping tests (Swift Testing) | `XCore`, `XUI`, `XLive`, `Shared`, `SharedUI`, and `Networking` for response fixtures |
 
 - XCore has no SwiftUI and no infrastructure, so the domain stays testable and usable by any UI.
 - XUI depends on XCore's protocols, never on XLive, so it builds, previews and tests on mocks alone.
@@ -68,9 +73,9 @@ Names inside a feature say what a thing is, so a screen, model or view keeps its
 
 - A feature that several tabs show owns each tab's root screen. If Discover split into Movies and TV tabs, it would own `MoviesView` and `TVShowsView`.
 - A section that two of the feature's screens show is one view in `Components/`, filed by kind (`Cards/`, `Rails/`). The movie's details and its cast screen both show `CastMemberCard`.
-- A view that shows a model is named for the model and its form (`CastMemberCard`, `MovieSummaryGrid`), and keeps that name if it moves to SharedUI.
+- A view several screens show is named for the model and its form (`CastMemberCard`, `MovieSummaryGrid`), and keeps that name if it moves to SharedUI.
 - A frame that several screens put around different content takes that content as `@ContentBuilder` closures.
-- A name an imported module already declares takes a qualifier from the domain: `MovieCollection`, not `Collection`. Unqualified, it hides the module's type in its own module and is ambiguous in every module that imports both, `@ContentBuilder` content included, so one in Shared, SharedUI or DesignSystem reaches every feature.
+- A name an imported module already declares takes a qualifier from the domain: `MovieCollection`, not `Collection`. Unqualified, it is ambiguous in every module that imports both, so one in Shared, SharedUI or DesignSystem is ambiguous in every feature.
 
 ## Folder layout
 
@@ -186,7 +191,7 @@ let package = Package(
 )
 ```
 
-- Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.2 or later. The swift settings above are what the architecture relies on.
+- Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.4 or later: the shapes use its SDK's `@ContentBuilder` and the `item:` forms of `alert` and `confirmationDialog`. The swift settings above are what the architecture relies on.
 - An API newer than the deployment target goes behind `if #available`; it never raises the target.
 - Never add `.defaultIsolation(MainActor.self)` to a package. Generated OpenAPI code doesn't build under it, and domain models, errors and destinations must stay nonisolated; UI types are marked `@MainActor` explicitly. Only the app target may default to the main actor.
 - No `@unchecked Sendable`, `nonisolated(unsafe)` or `@preconcurrency` in feature packages: a type that would need one becomes a value type or an actor.
@@ -199,7 +204,7 @@ The shared package mirrors a feature's layers:
 |---|---|---|
 | `Shared` | `Domain/`: the vocabulary several features share (`MovieSummary`, `Page<Item>`) | Foundation only |
 | `SharedUI` | `Components/`: views several features show (`MovieSummaryCard`) and the shared screen states (`ContentUnavailableView.offline(retry:)`) with their copy. `Navigation/`: `SharedDestination` ([navigation](navigation.md#shareddestination-sharedui)) | `Shared`, `DesignSystem` |
-| `SharedLive` | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`), tested in `SharedLiveTests`. `Services/`: a step on the client that several features' live services share ([live services](domain.md#live-services)) | `Shared`, `Networking` |
+| `SharedLive` | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, and `Page+TMDB.swift` for the API's page numbers as `nextPage`), tested in `SharedLiveTests`. `Services/`: a step on the client that several features' live services share ([live services](domain.md#live-services)) | `Shared`, `Networking` |
 
 ```swift
 /// One page of a paginated list, as a service returns it.
@@ -226,7 +231,7 @@ Never in the shared package:
 - Generated API types outside SharedLive
 - "Utils" grab-bags; a helper lives next to the concept it serves
 
-Identifiers cross features as IDs (`MovieSummary.ID`), not as objects. Test fixtures are repeated in each feature that needs them, with no shared testing target.
+Test fixtures are repeated in each feature that needs them, with no shared testing target.
 
 ## DesignSystem
 
@@ -239,7 +244,7 @@ It never knows a feature model, service, destination or screen, has no strings o
 
 ## Networking and other infrastructure
 
-`Networking` generates the API's types and client and wraps them in the app's client ([networking](networking.md)). It and any other infrastructure package, such as analytics, are imported by the Live targets, XTests and the app, never by XCore or XUI, and their types never appear in a feature's public API.
+`Networking` generates the API's types and client and wraps them in the app's client ([networking](networking.md)). It and any other infrastructure package, such as analytics, are imported by the Live targets, XTests and the app, never by XCore or XUI.
 
 They import no feature. What they need from one, such as the signed-in account's current token for an auth header, the app passes in as a closure when it builds their clients.
 
@@ -266,28 +271,52 @@ Each feature package builds, previews and tests without the app. Test what a bug
 | `Destination` mappings that aren't one-to-one, and adapters | app tests |
 | Visual states: loading, empty, error | previews |
 
-Test data comes from `make…` factories (`makeMovie(id:title:)`) in each test target's `Fixtures.swift`. Run the feature's scheme (`Catalog-Package`) after every change to it, and build the app after changing anything public.
+Test data comes from `make…` factories (`makeMovie(id:title:)`) in each test target's `Fixtures.swift`.
+
+After every change to a feature, test its package's scheme on an iOS Simulator from the package's folder, and build the app after changing anything public:
+
+```
+xcodebuild test -scheme Catalog-Package -destination 'platform=iOS Simulator,name=<an installed iPhone>' -skipPackagePluginValidation
+```
+
+`swift build` and `swift test` build for the Mac, where an iOS-only package's views and view models don't compile. `-skipPackagePluginValidation` lets Networking's generator plugin run without Xcode's trust prompt.
 
 ## Checking the boundaries
 
 The compiler enforces what each package declares, but not system frameworks, the app target or the roles types play. These checks cover the rest. Run them from the repository root; each finds nothing unless noted:
 
-- Features depend only on the shared package, DesignSystem and Networking. To compare, list every package dependency: `grep -Hn '\.package(' Packages/*/Package.swift`
-- XCore imports no SwiftUI: `grep -rl '^import SwiftUI' Packages/*/Sources/*Core`
+- Features depend only on the shared package, DesignSystem and Networking: `grep -Hn '\.package(' Packages/*/Package.swift | grep -vE '^Packages/(DesignSystem|Networking)/|"\.\./(Shared|DesignSystem|Networking)"'` finds only other infrastructure packages, such as analytics.
+- XCore and Shared import no UI framework and no Networking: `grep -rlE 'import (SwiftUI|UIKit|Networking)\b' Packages/*/Sources/*Core Packages/Shared/Sources/Shared`
+- XUI and SharedUI import no Networking and no Live target, which compiles once their target declares it: `grep -rlE 'import (Networking|[A-Za-z]+Live)\b' Packages/*/Sources/*UI`
 - Generated API types stay in the Live targets, Networking and tests: `grep -rl --exclude-dir=.build 'Components\.Schemas' --include='*.swift' . | grep -vE '/Sources/([A-Za-z]*Live|Networking)/|/Tests/'`
 - Only the app's screens read services: `grep -rnE '@Environment\(\\\.[A-Za-z]+Service\)' Packages/*/Sources`
 - Destinations register only at stack roots: `grep -rn 'navigationDestination' Packages/*/Sources` finds only previews.
-- No type plays a role the architecture leaves out: `grep -rnE '(class|struct|actor|protocol) [A-Za-z]+(Repository|UseCase|Interactor|Manager|Coordinator)\b' Packages/*/Sources`
+- No type plays a role the architecture leaves out: `grep -rnE --include='*.swift' --exclude-dir=.build '(class|struct|enum|actor|protocol) [A-Za-z]+(Repository|UseCase|Interactor|Manager|Coordinator)\b' .`
 - No package defaults to the main actor: `grep -Hn 'defaultIsolation' Packages/*/Package.swift`
-- Views use the catalog's generated symbols: `grep -rn 'Text("' Packages/*/Sources`
+- Views use generated string and asset symbols: `grep -rnE '(Text|Button|Label|Toggle|Image|navigationTitle)\("' Packages/*/Sources`
+
+A review copies this checklist into the response:
+
+```
+- [ ] Run the checks above
+- [ ] Each feature passes the boundary tests (references/modules.md#defining-features) and owns all its screens; the shared package holds nothing only one feature uses
+- [ ] Each screen: one view model, built by its XScreen, over its own service protocol and ports
+- [ ] Report each finding with its file, the rule it breaks and the fix; change code only when the user asks
+```
 
 ## Moving an app into packages
 
 An app built another way keeps its structure until the user asks to change it. A change there follows the app's own layout and conventions, and takes a shape from this skill only where the app has none of its own. A new app, or one already in packages, follows this skill throughout.
 
-Restructuring moves the app in steps that each leave it building:
-1. Networking, then DesignSystem, then the shared package, since every feature stands on them. The shared package starts with only what two features already share.
-2. One feature at a time, starting with the one that uses the fewest others, so it needs the fewest ports. As it moves, its reach into another feature becomes a destination or a port, and the code still in the app target switches to its public API.
-3. As each feature's screens leave the app target, building their services moves into `<AppName>App.init`, and their navigation into `Router`, `Destination` and `DestinationView`.
+Restructuring moves the app in steps that each leave it building. Copy this checklist into the response:
 
-A step that would leave the app unbuildable is split into smaller ones, never left half done.
+```
+- [ ] Map the app: its capabilities (a feature each, by the boundary tests in references/modules.md#defining-features), their screens, and what two features already share
+- [ ] Networking, then DesignSystem, then the shared package with only what two features already share; build the app after each
+- [ ] One feature at a time, the one using the fewest others first so it needs the fewest ports, as in SKILL.md's Add a feature: its reach into other features becomes destinations and ports, and the code still in the app target switches to its public API
+- [ ] As screens leave the app target, their services move into <AppName>App.init and their navigation into Router, Destination, DestinationView and navigationDestinations()
+- [ ] Build the app and run every package's tests after each step; fix and repeat until they pass
+```
+
+- A step that would leave the app unbuildable is split into smaller ones, never left half done.
+- A networking singleton splits as it moves: its requests, decoding and error classification become the client and its error in Networking, and what it does with the answers moves into the live services of the features that call it, each as its feature moves. Until its last caller leaves the app target, it stays there as a thin layer over the client.

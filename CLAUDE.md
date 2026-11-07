@@ -26,6 +26,13 @@ This repository is the `swiftui-architect` agent skill. Agents read `skills/swif
 
   Reuse these screens, and add one only when none of them can show a new idea. Never bring in names, endpoints, components or screens from the apps the skill is used on; write the rule they illustrate instead.
 - Code shows a shape the skill prescribes, such as a view model's state and the signatures of its loads, `XView`'s modifiers or a destination enum. It isn't an implementation to copy: no helper functions, error classifiers, test stubs or component internals, and a method body appears only where the body is the shape, such as the canonical `load()` in `view-models.md`, a paged screen's guarded `load()` or a key's reset. A rule about how a method works inside is a sentence, not code. Elide the rest with `…`.
+- A rule earns its place by how often agents get it wrong. A rare case gets at most a sentence in its reference, and never makes an example heavier.
+- Example code is Swift 6 against the SDK the `Package.swift` template names, and reads at a glance:
+  - Structured concurrency: loads start from SwiftUI's `.task`, `.task(id:)` and `.refreshable`, and an unstructured `Task` appears only where SwiftUI gives none, such as a button's action.
+  - The SDK's own API wherever one exists (`@Observable`, `@Entry`, `@ContentBuilder`, `ContentUnavailableView.search`), never a hand-made stand-in.
+  - `///` documents the declaration below it; a label over a group of properties is `//`.
+  - A public type that another module builds shows its public init, elided.
+  - Lines stay under about 100 columns: a long signature or call takes one argument per line, and a closure that doesn't fit names its parameter and takes its own lines.
 - Native SwiftUI and Apple's frameworks only: no navigation libraries, DI containers or invented infrastructure.
 - No invented states: an empty answer is never an error, and a screen shows only the states its design has.
 - Testing guidance names the tests a bug would break, never a test for what every instance of a shape repeats.
@@ -42,17 +49,18 @@ A skill loads in three stages, each with its own limit:
 2. **Invocation.** The `SKILL.md` body enters the conversation as one message and stays; the specification recommends under 5,000 tokens. After compaction Claude Code re-attaches the first 5,000 tokens of each invoked skill, within 25,000 tokens shared by every skill invoked, the most recent first.
 3. **References.** A file in `references/` loads only when `SKILL.md` sends Claude to it. A file reached only through another reference may be read in part, such as its first 100 lines.
 
-The guidance changes, so recheck these before changing the skill's structure or frontmatter: [skills in Claude Code](https://code.claude.com/docs/en/skills), [what survives compaction](https://code.claude.com/docs/en/context-window), [skill authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) and the [Agent Skills specification](https://agentskills.io/specification).
+The guidance changes, so recheck these before changing the skill's structure or frontmatter: [skills in Claude Code](https://code.claude.com/docs/en/skills), [what survives compaction](https://code.claude.com/docs/en/context-window), [skill authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices) the [Agent Skills specification](https://agentskills.io/specification) and [plugins](https://code.claude.com/docs/en/plugins).
 
 ## How the skill is structured
 
 - The skill folder holds only what agents read: `SKILL.md` and `references/`. Everything for people, such as `README.md`, this file and the license, stays outside it.
-- `SKILL.md` is the entry point. It stays under 500 lines and well under 5,000 tokens, with the most important content first, since compaction keeps the start. Its sections are: the example app, the shape, dependency direction, who owns what, principles, the shapes in brief, gotchas, workflows, references and related skills.
+- `SKILL.md` is the entry point. It stays under 500 lines and at most 5.4k tokens on invoke as `claude plugin details` reports them, with the most important content first, since compaction keeps the start: everything up to and including the References table falls inside the first 5,000 tokens. A change that adds to it cuts as much elsewhere. Its sections are: the example app, the shape, dependency direction, who owns what, principles, the shapes in brief, gotchas, references, workflows and related skills.
 - `SKILL.md` holds only what every task needs. Its gotchas are mistakes any task can make, in modules, naming, composition or navigation, each one an agent actually makes. A mistake only one shape invites, such as in paging or a keyed load, is stated once, in that shape's reference.
-- A workflow is a checklist the agent copies into its response, ending in a build or test it repeats until it passes.
+- A workflow is a checklist the agent copies into its response, ending in a build or test it repeats until it passes. A checklist for a task an app needs once, such as moving it into packages or a review, lives in the reference it follows, with a one-line pointer under Workflows in `SKILL.md`.
 - Detail lives in `references/`, one topic per file. Every reference is listed in the References table in `SKILL.md`, saying when to read it, and none is reachable only through another reference.
 - A reference over 100 lines starts with a `## Contents` list of its `##` sections.
 - Links between files use GitHub heading anchors; renaming a heading means updating every link to it.
+- `README.md` is for people deciding whether to use the skill: what it does, the architecture at a glance, how to install and use it, and what it leaves to other skills. It stays short, restates no rule and shows no shape; detail stays in the skill.
 - Frontmatter holds only `name` and `description`, in YAML that parses: a skill whose frontmatter doesn't parse loads without its description and never triggers. claude.ai and the API accept only the open Agent Skills keys (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`) and reject an upload with any other, such as Claude Code's `when_to_use` or `paths`.
 - `name` matches the folder: at most 64 characters of lowercase letters, digits and single hyphens, without `anthropic` or `claude`.
 - `description` is at most 1,024 characters, in the third person, with no angle brackets or XML tags. It says what the skill does, then when to use it, key use case first and in the words users type, and ends by claiming the tasks where the user doesn't name the architecture, since Claude tends to leave skills unused. The listing carries it on every turn of every session, so it stays near 100 words.
@@ -65,12 +73,13 @@ The guidance changes, so recheck these before changing the skill's structure or 
 4. Edit the reference first, then the line in `SKILL.md`, then `conventions.md`, then `README.md` when what the skill covers changes.
 5. Keep the descriptions in `SKILL.md`, `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` in step.
 6. Verify, and fix until each passes:
-   - `wc -l -c skills/swiftui-architect/SKILL.md` stays within the limits above, at about 3.5 characters a token for this markdown, so the References table stays inside the first 5,000 tokens
-   - the frontmatter parses and keeps to its limits: `ruby -ryaml -e 'h = YAML.safe_load(File.read(ARGV[0])[/\A---\n(.*?)\n---\n/m, 1]); d = h["description"]; puts h.keys.inspect, d.length, d.match?(/[<>]/)' skills/swiftui-architect/SKILL.md` prints only `name` and `description`, at most 1,024, and `false`
+   - `claude --plugin-dir . plugin details swiftui-architect` reports on-invoke at most ~5.4k and always-on near 240, `wc -l skills/swiftui-architect/SKILL.md` stays under 500, and `grep -b '^## Workflows' skills/swiftui-architect/SKILL.md` stays under 14,000 bytes, which keeps the References table inside the first 5,000 tokens
+   - the frontmatter parses and keeps to its limits: `ruby -EUTF-8 -ryaml -e 'h = YAML.safe_load(File.read(ARGV[0])[/\A---\n(.*?)\n---\n/m, 1]); d = h["description"]; puts h.keys.inspect, d.length, d.match?(/[<>]/)' skills/swiftui-architect/SKILL.md` prints only `name` and `description`, at most 1,024, and `false`
    - `grep` finds no stale name or rule, and no name from an app the skill is used on
    - every link and anchor resolves
+   - a new or changed code shape type-checks in a scratch package with the template's settings and the current SDK
    - `claude plugin validate .` passes; its notes that `CLAUDE.md` doesn't ship with the plugin and that there's no icon are expected
-7. When the change alters what an agent produces, give two fresh agents the same two or three realistic tasks (add a feature, add a paged screen, link two features, place a shared type, move an app into packages), one reading the baseline and one the edited skill. Read both answers, and fix whatever the edited skill still leaves them to guess.
+7. When the change alters what an agent produces, give two fresh agents the same two or three realistic tasks (add a feature, add a paged screen, link two features, place a shared type, move an app into packages), one reading the baseline and one the edited skill. Read both answers, and fix whatever the edited skill still leaves them to guess. When the description changes, also check in fresh sessions that the skill triggers on those tasks worded without naming the architecture, and stays unused on a task it leaves to other skills, such as a view's animation.
 
 A new reference file gets a lowercase topic name, a Contents list once it passes 100 lines, a row in the References table in `SKILL.md`, and a line in the layout in `README.md`.
 

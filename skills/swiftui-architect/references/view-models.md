@@ -23,7 +23,7 @@ public final class MovieCastViewModel {
     private let movieID: MovieSummary.ID
     private let service: any MovieCastService
 
-    /// Cast
+    // Cast
     private(set) var cast: [CastMember] = []
     private(set) var isLoadingCast: Bool = true
     private(set) var castError: CatalogError?
@@ -35,23 +35,22 @@ public final class MovieCastViewModel {
 
     func load() async {
         isLoadingCast = true
-        defer { isLoadingCast = false }
 
         do {
             cast = try await service.cast(movieID: movieID)
             castError = nil
         } catch is CancellationError {
-
-        } catch let error as CatalogError {
-            castError = error
+            return
         } catch {
-            castError = .unavailable
+            castError = error as? CatalogError ?? .unavailable
         }
+
+        isLoadingCast = false
     }
 }
 ```
 
-- `@MainActor @Observable public final class`, one per screen: a view pushed onto a stack, or a tab's root. A part of a screen gets a [nested model](#nested-models-and-modes) instead.
+- `@MainActor @Observable public final class`, one per screen, pushed, presented or a tab's root. A part of a screen gets a [nested model](#nested-models-and-modes) instead.
 - `public init` takes IDs and services and only assigns. The app builds a view model on every `body` pass and the view keeps the first, so `init` starts no tasks, subscriptions or I/O.
 - State is `private(set)`, except three kinds of plain `var` that views bind or set ([presentations](navigation.md#sheets-covers-and-alerts)):
   - input, such as a search field's `text`
@@ -71,9 +70,9 @@ A screen can have data while it refreshes, data and a failed refresh, or an erro
 | `isLoading…` (`isLoadingCast`) | Whether its load is running. It starts `true` when the screen loads it on appearing, so the first frame shows progress rather than the empty state |
 | `…Error` (`castError`) | The error its views switch over, usually the feature's `XError` ([domain](domain.md#errors)) |
 
-- A load sets `isLoading…` for its duration. On success it assigns the data and clears the error. On failure it keeps the data and records the error, so the error stays on screen through a retry until a load succeeds.
+- A load sets `isLoading…` when it starts and clears it when it succeeds or fails. On success it assigns the data and clears the error. On failure it keeps the data and records the error, so the error stays on screen through a retry until a load succeeds.
 - An error that isn't the property's type records the type's fallback case (`.unavailable`).
-- Cancellation is never a failure: a cancelled load changes nothing but `isLoading…`. `XView` runs `load()` from `.task`, which cancels it when the view disappears and runs it again, as a silent refresh, when the view reappears ([views](views.md#xview-xphaseview-and-xcontentview)). The networking client delivers a cancelled request as `CancellationError` ([networking](networking.md#errors-and-cancellation)).
+- Cancellation is never a failure: a cancelled load returns without changing anything, `isLoading…` included. `XView` runs `load()` from `.task`, which cancels it when the view disappears and runs it again, as a silent refresh, when the view reappears ([views](views.md#xview-xphaseview-and-xcontentview)); that load, or a new key's, ends the loading. A cancelled load can finish after its replacement starts, so a `defer` that clears `isLoading…` would hide the progress of the load still running. The networking client delivers a cancelled request as `CancellationError` ([networking](networking.md#errors-and-cancellation)).
 - A load never guards against a call already in flight. Overlapping loads fetch the same data, so the last to finish wins, and a guard would block a load that `.task` restarted, such as a paging footer's after it scrolls out and back in.
 - A resource keeps only the state its views read. One the screen leaves out when it fails, such as Discover's featured movies, keeps just its data: its load assigns on success and does nothing on failure.
 
@@ -90,16 +89,16 @@ public protocol DiscoverService: Sendable {
     func shelves(page: Int) async throws -> Page<DiscoverShelf>
 }
 
-/// Featured movies over shelves of movies, with the shelves paged in as the last one comes into view.
+/// Featured movies over shelves of movies, paged in as the last shelf comes into view.
 @MainActor
 @Observable
 public final class DiscoverViewModel {
     private let service: any DiscoverService
 
-    /// Featured
+    // Featured
     private(set) var featured: [MovieSummary] = []
 
-    /// Shelves
+    // Shelves
     private(set) var shelves: [DiscoverShelf] = []
     private(set) var isLoadingShelves: Bool = true
     private(set) var shelvesError: DiscoverError?
@@ -122,6 +121,10 @@ public final class DiscoverViewModel {
     func refresh() async { … }
 
     func loadNextShelvesPage() async { … }
+
+    private func loadFeatured() async { … }
+
+    private func loadShelves() async { … }
 }
 ```
 
@@ -136,17 +139,17 @@ A paged resource adds three properties to its data, `isLoading…` and `…Error
 |---|---|
 | `next…Page` (`nextShelvesPage`) | The page to ask for next, from the service's `Page<Item>`; `nil` after the last one |
 | `isLoadingNext…Page` | Whether the next page is loading |
-| `next…PageError` | Why the next page failed, with its own type: a footer often shows fewer cases than the error view |
+| `next…PageError` | Why the next page failed, typed like `…Error`. Only the paging footer reads it, to offer a retry |
 
 - Loading the first page replaces the list, sets `next…Page` and clears `next…PageError`.
 - `loadNext…Page()` does nothing while `next…Page` is `nil`. Otherwise it asks for that page and appends it only if `next…Page` still names the page it asked for. If it doesn't, a refresh started the list over or another call already appended the page, and the result is dropped.
 
 ### Coming back to a paged list
 
-Coming back to a screen runs its `.task` again. Loading the first page again would replace every page the user scrolled through, and the shorter list would bring the footer on screen and load page two at once. So a screen with a paged list guards `load()` on that list and moves its loads into `refresh()`, as [Discover does](#several-resources):
+Coming back to a screen runs its `.task` again. Loading the first page again would replace every page the user scrolled through, and the shorter list would bring the footer on screen and load page two at once. So a screen with a paged list guards `load()` on what its phase view follows, usually that list, and moves its loads into `refresh()`, as [Discover does](#several-resources):
 
 - `.refreshable` calls `refresh()`, which starts the list over and loads the screen's other resources again.
-- A retry calls `load()`: after a failure the list is empty, so the guard lets it through.
+- A retry calls `load()`: the error shows only while what the phase view follows is missing, so the guard lets it through.
 - A resource beside the list, such as the featured movies, loads again only on a refresh.
 
 ## A thing and its paged list
@@ -163,10 +166,10 @@ public protocol GenreDetailService: Sendable {
 @MainActor
 @Observable
 public final class GenreDetailViewModel {
-    /// Genre
+    // Genre
     private(set) var genre: Genre?
 
-    /// Movies, paged as Discover's shelves are
+    // Movies, paged as Discover's shelves are
     private(set) var movies: [MovieSummary] = []
     // isLoadingMovies, moviesError, nextMoviesPage, isLoadingNextMoviesPage, nextMoviesPageError
 
@@ -178,7 +181,7 @@ public final class GenreDetailViewModel {
 - Load the list after the thing only when the thing decides whether there is a list; otherwise load both side by side.
 - What the phase view follows depends on what the thing shows:
   - When the thing only titles the screen, as a genre does, the phase view follows the list, and the title goes on `XView` so it stays up in every state.
-  - When the thing shows content of its own above the list, the phase view follows the thing, and the list is a section of the content with its own progress, error and paging footer, like a [keyed section](#keyed-resources).
+  - When the thing shows content of its own above the list, the phase view follows the thing, and `load()` guards on it. The list is a section of the content with its own progress, error and paging footer, like a [keyed section](#keyed-resources), and its retry loads the list's first page again.
 
 ## Keyed resources
 
@@ -205,10 +208,10 @@ func loadCredits() async { … }
 - Changing the key is synchronous: it empties the data, clears its error and paging, and sets `isLoading…` when a load follows. The old key's data never shows under the new one.
 - A control that picks the key calls `select(_:)` rather than setting the key, so the reset always runs.
 - `XView` loads from `.task(id: viewModel.selectedDepartment)`, the first load included; `load()` loads the rest of the screen.
-- A load remembers the key it started with. SwiftUI cancels the old key's load, but a response can arrive before the cancellation does, so a load whose key is no longer selected drops its result and its error, and leaves `isLoading…` to the current key's load.
+- A load remembers the key it started with. SwiftUI cancels the old key's load, but a response can arrive before the cancellation does, so a load whose key is no longer selected returns as a cancelled one does, dropping its result and its error.
 - A keyed resource beside the thing a screen shows, such as the credits under a person's details, is a section of the content, with the control that picks its key, its own progress and its own error. The phase view follows the person, so a new key never blanks the screen.
 - A keyed paged list, such as search results, guards its load on the list like a [screen's](#coming-back-to-a-paged-list). A new key empties the list, so the new key's load gets through.
-- Typed text is input, not a key: a plain `var` the field binds. `XView` applies it to the key after a pause in typing (`.task(id: viewModel.text)` with a short sleep), and at once on submit or when the field is cleared.
+- Typed text is input, not a key: a plain `var` the field binds. `XView` applies it to the key after a pause in typing, and at once on submit or when the field is cleared. The pause is `.task(id: viewModel.text)` sleeping briefly: the next keystroke cancels it, so the text applies only if the sleep ends uncancelled, never after a `try?` that swallows the cancellation.
 
 ## Filtering loaded values
 
@@ -219,7 +222,7 @@ Searching what a screen already shows, such as titles in the watchlist, narrows 
 @MainActor
 @Observable
 public final class WatchlistViewModel {
-    /// Items
+    // Items
     private(set) var items: [WatchlistItem] = [] {
         didSet { updateMatchingItems() }
     }
@@ -238,7 +241,7 @@ public final class WatchlistViewModel {
 
 - Never work the matches out in a view's `body` or in the collection given to `ForEach`: the view model holds them, so the views only read them and tests can check them.
 - The matches follow each keystroke, with no pause and no `.task(id:)`, because nothing loads.
-- The phase view shows the content with the matches, and `ContentUnavailableView.noResults` while there are values but none match ([views](views.md#xview-xphaseview-and-xcontentview)).
+- What the phase view shows while nothing matches: [views](views.md#xview-xphaseview-and-xcontentview).
 
 ## Nested models and modes
 
@@ -260,7 +263,10 @@ public final class MovieDetailViewModel {
     ) {
         self.movieID = movieID
         self.service = service
-        self.watchlistMembership = WatchlistMembership(movieID: movieID, service: watchlistMembershipService)
+        self.watchlistMembership = WatchlistMembership(
+            movieID: movieID,
+            service: watchlistMembershipService
+        )
     }
 }
 
@@ -282,10 +288,8 @@ extension MovieDetailViewModel {
 }
 ```
 
-- Only the views that read a nested model redraw when it changes: the watchlist button redraws for the watchlist, the rest of the screen doesn't.
 - It uses its view model's services, the screen's own or a port, and never gets a service of its own for being nested.
 - Nest a part that only some views read and that has its own input, loading or errors. What the content shows stays on the view model, including a key and what it loads (a selected department and its credits), and so does a single flag or value such as `isFilterPresented`.
-- A view binds a nested model's input through a binding it derives in `body`: `@Bindable var searchSession = viewModel.searchSession`, then `$searchSession.text`.
 
 ### Naming nested models
 
@@ -315,7 +319,7 @@ extension GenreDetailViewModel {
         /// The words the results are for, once applied. Empty while not searching.
         private(set) var query = ""
 
-        /// Results
+        // Results
         private(set) var results: [MovieSummary] = []
         private(set) var isLoadingResults: Bool = false
         private(set) var resultsError: GenreDetailError?
@@ -333,18 +337,18 @@ extension GenreDetailViewModel {
 }
 ```
 
-`GenreDetailService` gains `movies(genreID:matching:page:)` for it, and the screen's phase view picks the mode in its first branch ([views](views.md#modes)).
+`GenreDetailService` gains `movies(genreID:matching:page:)` for it, and the screen's phase view picks the mode in its first branch ([views](views.md#modes)). Its `load()` does nothing while `query` is empty, since `.task(id: query)` also runs when the screen appears and when the field is cleared.
 
 ## Testing view models
 
 Swift Testing, `@MainActor` suites, `@testable import XUI`, and a private actor stub of the service in each test file. Tests that interleave two loads use a stub that holds a request until the test releases it. How to write the tests themselves is a Swift Testing skill's subject ([related skills](../SKILL.md#related-skills)).
 
 Test the rules a bug would break on this screen, not the shape every view model shares:
-- What a load publishes, and what it asks the service for.
+- What a load asks the service for: the ID, key or page.
 - The screen's own failure rule, such as Discover still showing its shelves when the featured movies fail.
 - Paging: a next page appends, and loading again keeps the pages.
 - Stale results: a page that arrives after a refresh, or a key's results after a new key, is dropped, and a restarted footer still loads its page.
-- A key or a mode's rules: a new key starts the data over and shows it as loading.
+- A key or a mode's rules: a new key starts the data over and shows it as loading until its own load ends, even when the old key's load ends after it starts.
 - A filter: what a text matches, and the matches after the values change.
 
 Skip what the shape guarantees everywhere: starting values, the fallback error, a retry clearing an error, and cancellation alone, which the stale-result tests already cover. Test a nested model on its own, made the way its view model makes it.
