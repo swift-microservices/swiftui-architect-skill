@@ -1,6 +1,6 @@
 # SwiftUI Architect
 
-An agent skill for structuring modular SwiftUI apps. It tells Claude, and any agent that reads [Agent Skills](https://agentskills.io), where each piece of an app lives, who owns it and what shape it takes: one Swift package per feature, a small shared package, and an app target that builds services, composes screens and owns native SwiftUI navigation.
+An agent skill for structuring modular SwiftUI apps. It tells Claude, Codex and any agent that reads [Agent Skills](https://agentskills.io) where each piece of an app lives, who owns it and what shape it takes: one Swift package per feature, a small shared package, and an app target that builds services, composes screens and owns native SwiftUI navigation.
 
 Ask for a feature, a screen, a link between two features or a move into packages, and the agent answers with the same structure every time.
 
@@ -41,6 +41,13 @@ Every example in the skill comes from one small movie browser on the TMDB API, s
 /plugin install swiftui-architect@swiftui-architect-skill
 ```
 
+**Codex plugin**
+
+```bash
+codex plugin marketplace add the-braveknight/swiftui-architect-skill
+codex plugin add swiftui-architect@swiftui-architect-skill
+```
+
 **skills CLI**
 
 ```bash
@@ -49,11 +56,11 @@ npx skills add https://github.com/the-braveknight/swiftui-architect-skill --skil
 
 **Manually**
 
-Copy `skills/swiftui-architect/` to `~/.claude/skills/` for all your projects, or to `.claude/skills/` in a repository to share it with your team.
+Copy `skills/swiftui-architect/` to `~/.claude/skills/` for Claude Code or `~/.agents/skills/` for Codex, for all your projects. To share it with your team, copy it to a repository's `.claude/skills/` or `.agents/skills/` instead.
 
 ## Use
 
-The skill loads by itself when a task matches, even when the request doesn't mention architecture, or on request with `/swiftui-architect`. Things to ask:
+The skill loads by itself when a task matches, even when the request doesn't mention architecture, or on request: `/swiftui-architect` in Claude Code, `$swiftui-architect` in Codex. Things to ask:
 
 - "Add a screen that shows a movie's reviews, a page at a time, from the movie's details."
 - "Split this app into Swift packages."
@@ -79,8 +86,12 @@ Visual design and accessibility are out of scope.
 
 ```
 .claude-plugin/              Claude Code plugin and marketplace manifests
+.codex-plugin/               Codex plugin manifest
+.agents/plugins/             Codex marketplace
+.github/                     checks, pull request labels and releases
 skills/swiftui-architect/
 ├── SKILL.md                 entry point: the shape, rules, gotchas, references, workflows
+├── agents/openai.yaml       the skill's name in Codex
 └── references/
     ├── modules.md           features and their boundaries, packages, the shared package, tests, reviews
     ├── domain.md            models, errors, services, mocks, ports between features
@@ -95,7 +106,7 @@ CLAUDE.md                    how to change the skill
 
 ## Contributing
 
-Issues and pull requests are welcome. Changes follow [CLAUDE.md](CLAUDE.md), which says what belongs in the skill, how its files are organized, and the checks a change must pass.
+Issues and pull requests are welcome. Changes follow [CLAUDE.md](CLAUDE.md), which says what belongs in the skill, how its files are organized, the checks a change must pass, and the label its pull request carries.
 
 ## License
 
