@@ -1,6 +1,6 @@
 # SwiftUI Architect
 
-[![Validate](https://github.com/the-braveknight/swiftui-architect-skill/actions/workflows/validate.yml/badge.svg)](https://github.com/the-braveknight/swiftui-architect-skill/actions/workflows/validate.yml)
+[![Validate](https://github.com/swift-microservices/swiftui-architect-skill/actions/workflows/validate.yml/badge.svg)](https://github.com/swift-microservices/swiftui-architect-skill/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 An [agent skill](https://agentskills.io) that teaches Claude and Codex to design, build and review modular SwiftUI apps: one Swift package per feature, clear module boundaries, modern Swift, and native SwiftUI navigation that works across modules.
@@ -34,21 +34,21 @@ Packages/Catalog
 **Claude Code**
 
 ```
-/plugin marketplace add the-braveknight/swiftui-architect-skill
+/plugin marketplace add swift-microservices/swiftui-architect-skill
 /plugin install swiftui-architect@swiftui-architect-skill
 ```
 
 **Codex**
 
 ```bash
-codex plugin marketplace add the-braveknight/swiftui-architect-skill
+codex plugin marketplace add swift-microservices/swiftui-architect-skill
 codex plugin add swiftui-architect@swiftui-architect-skill
 ```
 
 **skills CLI**
 
 ```bash
-npx skills add https://github.com/the-braveknight/swiftui-architect-skill --skill swiftui-architect
+npx skills add https://github.com/swift-microservices/swiftui-architect-skill --skill swiftui-architect
 ```
 
 **Manually**
