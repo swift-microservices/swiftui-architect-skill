@@ -1,0 +1,3 @@
+interface:
+  display_name: "SwiftUI Architect"
+  short_description: "Architect modular SwiftUI apps as Swift packages"

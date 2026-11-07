@@ -12,11 +12,11 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 
 | Kind | Name | Example |
 |---|---|---|
-| Feature package | what the user does there, never a screen, a tab or a model other features show ([defining features](modules.md#defining-features)) | `Discover`, `Catalog`, `Watchlist`; not `MovieDetail`, `Home` or `Movie` |
+| Feature package | the capability, never a screen, a tab that gathers several capabilities or a model other features show ([defining features](modules.md#defining-features)) | `Discover`, `Catalog`, `Watchlist`; not `MovieDetail`, `Home` or `Movie` |
 | Feature targets | `XCore`, `XUI`, `XLive`, `XTests` | `CatalogUI` |
 | Domain model | a plain noun for the whole thing; never ends in `Detail` or a transport word | `Movie`, `Genre`, `DiscoverShelf` |
 | What a list shows of a model | the model's name + `Summary` | `MovieSummary` |
-| A model's id | `let id` of its real type, which `Identifiable` names `X.ID` | `Movie.ID` |
+| A model's id | `let id` of its real type, which `Identifiable` names `X.ID`; signatures name the summary's | `MovieSummary.ID` |
 | A name an imported module declares | a qualifier from the domain | `MovieCollection`, not `Collection` |
 | Feature error | `XError`; one per screen when their failures differ | `CatalogError.notFound`, `GenreDetailError` |
 | Service protocol (XCore) | `XService`, one per screen; another for each concern with a source of its own; never a `…Repository`, `…UseCase` or `…Manager` | `DiscoverService`, `MovieCastService`, `RecentSearchesService` |
@@ -27,15 +27,20 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | API client and its error | the API's name + `Client` / `Error`; client methods keep the spec's operation names | `TMDBClient.movieDetails(id:)`, `TMDBError` |
 | View model | `XViewModel`, one per screen | `MovieCastViewModel` |
 | View model actions | imperative verbs; `refresh()` beside `load()` on a screen with a paged list | `load()`, `refresh()`, `loadNextShelvesPage()`, `select(_:)` |
-| View model state | per resource: the data, `isLoading…`, `…Error`; paged: `next…Page`, `isLoadingNext…Page`, `next…PageError`; keyed: the key (`selectedDepartment`); bound input (`text`) and the values matching it (`matchingItems`), what's presented (`isFilterPresented`), a place shown over the screen (`presentedDestination`), the value a presentation is about (`itemToRemove`), one of several sheets (`presentedSheet`), a draft (`filterDraft`), a change in progress (`isUpdating`) ([view models](view-models.md#one-resource-data-activity-and-error)) | `shelves`, `isLoadingShelves`, `shelvesError`, `nextShelvesPage` |
+| Resource state | the data, `isLoading…`, `…Error` ([view models](view-models.md#one-resource-data-activity-and-error)) | `shelves`, `isLoadingShelves`, `shelvesError` |
+| Paged resource state | adds `next…Page`, `isLoadingNext…Page`, `next…PageError` | `nextShelvesPage`, `nextShelvesPageError` |
+| A key | named for what it holds: what the user picked, or the words the results are for | `selectedDepartment`, `query` |
+| Bound input and its matches | the input, and the values matching it | `text`, `matchingItems` |
+| Presentation state | what's presented, a place shown over the screen, one of several sheets, the value a presentation is about, a draft | `isFilterPresented`, `presentedDestination`, `presentedSheet`, `itemToRemove`, `filterDraft` |
+| A change in progress | `isUpdating` | `WatchlistMembership.isUpdating` |
 | Nested model | declared inside its view model; a plain noun for what it holds, never `…ViewModel` | `MovieDetailViewModel.WatchlistMembership`, `GenreDetailViewModel.SearchSession` |
 | Screen views | `XView` (public), `XPhaseView`, `XContentView`; a mode's after `X` | `DiscoverView`, `DiscoverPhaseView`, `GenreDetailSearchPhaseView` |
-| Sections of one screen | `X` + what it is | `MovieDetailCastRail`, `DiscoverFeaturedView` |
+| Sections of one screen | `X` + what it is, leaving out what `X` already names | `MovieDetailCastRail`, `DiscoverFeaturedView`, `WatchlistRow` |
 | Views several of a feature's screens show | the model they show and their form, filed in `Components/` by kind | `CastMemberCard`, `MovieSummaryGrid` |
 | Paging footer | `X` + resource + `NextPageFooter`, leaving out the resource when `X` already names it | `DiscoverShelvesNextPageFooter` |
 | Toolbar | `XToolbar` (`ToolbarContent`) | `WatchlistToolbar` |
 | Destinations | `XDestination` in a feature, `SharedDestination` in SharedUI; cases name the place and carry IDs | `CatalogDestination.cast(movieID:)`, `SharedDestination.movieDetail(id:)` |
-| App navigation | `Router`, `TabDestination`, `Destination`, `DestinationView`; a `Destination` case is its app screen's name without `Screen` | `.movieCast(movieID:)` |
+| App navigation | `Router`, `TabDestination`, `Destination`, `DestinationView`, and `navigationDestinations()`, the modifier every stack root applies; a `Destination` case is its app screen's name without `Screen` | `.movieCast(movieID:)` |
 | App screen | `XScreen` | `MovieDetailScreen` |
 | App entry point | `<AppName>App` | `MoviesApp` |
 | Environment key | `xService` in `EnvironmentValues+XService.swift` | `\.discoverService` |

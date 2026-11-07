@@ -16,7 +16,7 @@ XCore holds a feature's domain: the models its screens show, the errors they can
 A domain model describes what the app shows, not what the API sends. The API's shape (optional everything, snake_case fields, image paths, date strings, envelopes, pagination metadata) stops at the Live targets.
 
 ```swift
-// What TMDB sends, generated in Networking: every field optional, a date as text, an image as a path.
+// What TMDB sends, generated in Networking: optional fields, a date as text, an image as a path.
 // Components.Schemas.MovieDetails(id:title:releaseDate:voteAverage:posterPath:genres:)
 
 // What the Catalog feature shows, in CatalogCore:
@@ -27,11 +27,13 @@ public struct Movie: Identifiable, Equatable, Sendable {
     public let rating: Double?
     public let posterURL: URL?
     public let genres: [String]
+
+    public init(id: Int, title: String, year: Int?, …) { … }
 }
 ```
 
 - **Value types, `Equatable` and `Sendable`.** They cross from live services to the main actor, and an `@Observable` view model only skips redrawing for an equal value when it can compare them. `Identifiable` when a list shows them or a screen links to them.
-- **`Identifiable` names the id's type.** Store `public let id: Int`, or whatever the id really is, and refer to it as `Movie.ID`, with no `typealias ID`.
+- **`Identifiable` names the id's type.** Store `public let id: Int`, or whatever the id really is, and refer to it as the model's `ID`, with no `typealias ID`. A whole thing and its summary share one id, and signatures name the summary's, which lists and destinations carry: `movie(id: MovieSummary.ID) -> Movie`.
 - **The whole thing is a plain noun; what a list shows of it adds `Summary`**: `Movie` and `MovieSummary`. A summary links to its whole thing by id. A model name never ends in `Detail`, which only screens use, or in a transport word (`DTO`, `Response`).
 - **A model is complete for its role.** When reusing a model would leave fields empty or filled with placeholders, that role gets its own type. The whole thing leaves out what loads separately, such as a [paged list](view-models.md#a-thing-and-its-paged-list).
 - **Each fact is stated once, so an illogical value can't be written.** When two properties could disagree, carry one inside the other and compute it, rather than checking in an initializer:
@@ -63,7 +65,7 @@ public enum CatalogError: Error, Equatable {
 
 ## Service protocols
 
-XCore declares one service protocol per screen, holding only what that screen loads and changes, with one ready-made method per resource. The service maps and aggregates what one call returns, so a view model only assigns it.
+XCore declares one service protocol per screen, holding what that screen loads and changes, with one ready-made method per resource. The service maps and aggregates what one call returns, so a view model only assigns it.
 
 ```swift
 /// What a movie's details show: the movie and its cast.
@@ -127,7 +129,7 @@ public struct TMDBMovieDetailService: MovieDetailService {
 }
 ```
 
-- Methods are `@concurrent`, so requests and mapping run off the main actor. Protocol requirements and mocks stay unannotated.
+- A struct's methods are `@concurrent`, so requests and mapping run off the main actor. An actor's methods stay isolated to it, which already keeps them off the main actor; `@concurrent` would cut them off from its state. Protocol requirements and mocks stay unannotated.
 - Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer: a list item missing a required field is dropped, and a whole response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in SharedLive ([modules](modules.md#shared-sharedui-and-sharedlive)).
 - The feature's error maps from the client's error in an initializer, such as a 404 to `.notFound`. `CancellationError` passes through untouched ([networking](networking.md#errors-and-cancellation)).
 - A client step that two of a feature's live services share, such as reading extra artwork, is an internal extension on the client in XLive.
@@ -162,7 +164,9 @@ public struct MockMovieDetailService: MovieDetailService {
 extension MovieDetailService where Self == MockMovieDetailService {
     public static var mock: Self { Self() }
 
-    public static func mock(_ scenario: MockMovieDetailService.Scenario) -> Self { Self(scenario: scenario) }
+    public static func mock(_ scenario: MockMovieDetailService.Scenario) -> Self {
+        Self(scenario: scenario)
+    }
 }
 ```
 
@@ -193,8 +197,10 @@ struct WatchlistMembershipAdapter: WatchlistMembershipService {
 }
 ```
 
-The consumer ships a mock of its port too, so its previews and tests don't need the provider.
+The consumer ships a mock of its port too, so its previews and tests don't need the provider. A port throws the consumer's error, and its adapter maps the owner's into it.
 
-State several features read or change, such as the watchlist or a signed-in account, works the same way. One feature owns it, with its model and service, and every other feature declares the port it needs. The owner's service carries what those ports need beside what its own screens load and change, such as `WatchlistService.add(_:)`, and the app builds each adapter over its one instance, so every feature sees the same state. It never moves into the shared package or a singleton.
-
-When another feature's state, such as whether an account is signed in, decides which of a feature's live services answers, the app implements that feature's service as an adapter that picks one per call. Neither feature learns about the other.
+State several features read or change, such as the watchlist or a signed-in account, works the same way:
+- One feature owns it, with its model and service, and every other feature declares the port it needs.
+- The owner's service carries what those ports need beside what its own screens load and change (`WatchlistService.add(_:)`).
+- The app builds each adapter over the owner's one service instance, so every feature sees the same state. The state never moves into the shared package or a singleton.
+- When another feature's state, such as whether an account is signed in, decides which of a feature's live services answers, the app implements that feature's service as an adapter that picks one per call. Neither feature learns about the other.

@@ -1,77 +1,38 @@
 # SwiftUI Architect
 
-An agent skill that designs and maintains modular SwiftUI apps: vertical feature slices as Swift packages, a small shared horizontal layer, and an app target that owns composition and native SwiftUI navigation.
+An agent skill for structuring modular SwiftUI apps. It tells Claude, Codex and any agent that reads [Agent Skills](https://agentskills.io) where each piece of an app lives, who owns it and what shape it takes: one Swift package per feature, a small shared package, and an app target that builds services, composes screens and owns native SwiftUI navigation.
 
-This README is for people. Agents read [SKILL.md](skills/swiftui-architect/SKILL.md) and the files in [references/](skills/swiftui-architect/references/). Agents changing the skill follow [CLAUDE.md](CLAUDE.md).
+Ask for a feature, a screen, a link between two features or a move into packages, and the agent answers with the same structure every time.
 
-## Why modular
+## What you get
 
-Large SwiftUI codebases are commonly split into many local Swift packages, one per feature plus a few shared layers. Teams converge on this shape for practical reasons:
+- **Boundaries the compiler enforces.** Each capability is one Swift package with `Core`, `UI` and `Live` targets. Features never import each other; they meet only in the app.
+- **A domain shaped for screens.** Models describe what the app shows, not what the API sends. Generated OpenAPI types stop at the `Live` targets.
+- **Predictable view models.** Data, loading and error per resource, plus paging, keyed loads, search and nested models, with the tests worth writing.
+- **Native navigation across modules.** Features list where their views go; the app maps each place to a screen and registers every place at each stack root. No routers inside features and no navigation libraries.
+- **Swift 6 throughout.** Strict concurrency, `@MainActor` view models, `Sendable` services, and loads that start from SwiftUI's own tasks.
+- **Consistent names.** Packages, targets, types, views and files follow the Swift API Design Guidelines and one naming table.
 
-- **Boundaries the compiler enforces.** A feature can only use what its package declares as a dependency. "Search must not reach into Watchlist" stops being a review comment and becomes a build error.
-- **Ownership.** A feature package has a clear owner, a clear public API, and a place for everything it needs. Several teams can work in parallel with few merge conflicts.
-- **Faster builds and previews.** Changing one feature rebuilds that package and what depends on it, not the whole app. Previews compile only the feature being previewed.
-- **Testability in isolation.** A feature builds and tests against a mock of its own service contract, without the app, the network or other features.
-- **Replaceable layers.** Networking or the design system can change behind a stable contract. A feature can be rewritten, removed or put behind a flag without touching others.
-- **Readable architecture.** The folder tree and the dependency graph show how the app is built. New engineers and agents find where code belongs without reading all of it.
+The cost is more `Package.swift` files, some deliberate duplication instead of early sharing, and an app target that does the wiring. The skill keeps that cost predictable with templates and clear rules about where code goes.
 
-## Why use it for production apps
-
-Production apps live for years, grow features, and change hands. The costs of this structure are paid once and stay small; the costs of a monolith grow with every feature:
-
-| Concern | Monolithic target | This architecture |
-|---|---|---|
-| Accidental coupling | Any file can use any type | Only declared dependencies compile |
-| Build time | Grows with the whole app | Scoped to changed packages |
-| Testing a screen | Needs app setup and real services | Needs the feature's mock |
-| Navigation between features | Scattered pushes and shared routers | One app-owned Router, one mapping file |
-| Localization | One huge catalog | One catalog per feature, compile-time-checked symbols |
-| Onboarding | Read the codebase | Read the module map |
-
-The trade-offs are real: more `Package.swift` files to maintain, some deliberate duplication instead of premature sharing, and an app target that does the wiring. The skill keeps those costs predictable with templates and strict rules about where code goes.
-
-## What the skill covers
-
-- Defining features: a feature is a capability, never a screen, a tab or a model other features show, with tests for where a boundary goes, when to split or merge, and the packages to avoid.
-- The module map and dependency direction: feature packages (`XCore`, `XUI`, `XLive`, `XTests`), one per capability whichever tabs show it, over a shared package (`Shared`, `SharedUI`, `SharedLive`), `DesignSystem` and `Networking`, and what goes in each.
-- Domain-driven models that describe what the app shows, not what the API sends, with live services mapping API responses and errors into them.
-- Networking: one package with the API's types and the app's client over them, generated with Apple's swift-openapi-generator when the API has an OpenAPI document, with failures and cancellation classified once.
-- Service design and naming, following the Swift API Design Guidelines: a protocol per screen with no repository or use case layers, reads as noun phrases, mocks for previews and tests, consumer-owned ports between features, and one owner for state several features share, such as a signed-in account.
-- View models: per-resource loading state, several resources, pagination, resources keyed by what the user picks or types, a search through what's already loaded, nested models for parts of a screen such as a search within it, feature error types, cancellation, and which tests are worth writing.
-- The views a screen is made of: `XView`, `XPhaseView`, `XContentView`, sections and paging footers, and phase views that check for data first, so a refresh keeps the content on screen.
-- App composition: the `<AppName>App` initializer as the dependency-injection root, environment keys, tab and pushed `XScreen` views.
-- Routing: feature `XDestination` values, SharedUI's `SharedDestination` for the places several features open, an app-owned `Router`, one mapping file, registration at stack roots, screens shown as sheets or covers through the same mapping, and presentations held as view model state, down to the value an alert or sheet is about.
-- Localization, assets and fonts per module: String Catalogs with generated symbols, asset catalogs with generated symbols, fonts that DesignSystem registers.
-- Naming and folder conventions, including what a feature's screens share and what spans the whole feature.
-- Existing apps: following an app's own structure until asked to change it, moving an app into packages one buildable step at a time, and reviewing an app's boundaries with checks an agent can run.
-
-Out of scope, and covered by other skills the agent loads alongside this one:
-- SwiftUI view code technique: Apple's `swiftui-specialist`, built into Xcode's coding assistant; [SwiftUI Expert](https://github.com/AvdLee/SwiftUI-Agent-Skill); [SwiftUI Pro](https://github.com/twostraws/swiftui-agent-skill)
-- Swift Concurrency: [Swift Concurrency](https://github.com/AvdLee/Swift-Concurrency-Agent-Skill), [Swift Concurrency Pro](https://github.com/twostraws/Swift-Concurrency-Agent-Skill)
-- Swift Testing: [Swift Testing Expert](https://github.com/AvdLee/Swift-Testing-Agent-Skill)
-
-## Layout
+## The architecture at a glance
 
 ```
-swiftui-architect-skill/
-├── .claude-plugin/              Claude Code plugin and marketplace manifests
-├── skills/swiftui-architect/
-│   ├── SKILL.md                 entry point: shape, rules, gotchas, workflows, which reference to read
-│   └── references/
-│       ├── modules.md           defining features, targets, naming inside a feature, folders, Package.swift, the shared package, DesignSystem, strings, tests, boundary checks, moving an app into packages
-│       ├── domain.md            domain models, errors, service protocols and naming, live services, mocks, ports
-│       ├── networking.md        the Networking package, the API client, errors and cancellation
-│       ├── view-models.md       loading state, several resources, pagination, keyed resources, filtering, nested models, tests
-│       ├── views.md             XView, XPhaseView, XContentView, paging footer, passing data
-│       ├── composition.md       <AppName>App.swift, dependency injection, environment keys, XScreen
-│       ├── navigation.md        XDestination, Router, Destination, registration, push or present
-│       └── conventions.md       naming and folders
-├── CLAUDE.md                    instructions for agents changing the skill
-├── README.md
-└── LICENSE
+MoviesApp/              app target: builds services, composes screens, owns navigation
+Packages/
+├── Discover/           DiscoverCore · DiscoverUI · DiscoverLive · DiscoverTests
+├── Catalog/            CatalogCore · CatalogUI · CatalogLive · CatalogTests
+├── …                   one package per capability
+├── Shared/             Shared · SharedUI · SharedLive: only what several features share
+├── DesignSystem/       tokens, styles and domain-free components
+└── Networking/         the API's types and client, generated from an OpenAPI document
 ```
 
-## Installation
+Dependencies point one way. A feature's `UI` and `Live` targets build on its `Core`, every feature stands on the shared package, `DesignSystem` and `Networking`, and only the app sees every feature.
+
+Every example in the skill comes from one small movie browser on the TMDB API, so each rule is shown on a screen that's easy to picture: Discover, a movie's details and cast, Search with a filter, a Watchlist, and signing in.
+
+## Install
 
 **Claude Code plugin**
 
@@ -80,17 +41,72 @@ swiftui-architect-skill/
 /plugin install swiftui-architect@swiftui-architect-skill
 ```
 
+**Codex plugin**
+
+```bash
+codex plugin marketplace add the-braveknight/swiftui-architect-skill
+codex plugin add swiftui-architect@swiftui-architect-skill
+```
+
 **skills CLI**
 
 ```bash
 npx skills add https://github.com/the-braveknight/swiftui-architect-skill --skill swiftui-architect
 ```
 
-**Manual**
+**Manually**
 
-Copy `skills/swiftui-architect/` to `~/.claude/skills/swiftui-architect/` (all your projects) or to `.claude/skills/swiftui-architect/` in a repository (shared with the team).
+Copy `skills/swiftui-architect/` to `~/.claude/skills/` for Claude Code or `~/.agents/skills/` for Codex, for all your projects. To share it with your team, copy it to a repository's `.claude/skills/` or `.agents/skills/` instead.
 
-Claude Code loads the skill when a task matches its description, or on request with `/swiftui-architect`.
+## Use
+
+The skill loads by itself when a task matches, even when the request doesn't mention architecture, or on request: `/swiftui-architect` in Claude Code, `$swiftui-architect` in Codex. Things to ask:
+
+- "Add a screen that shows a movie's reviews, a page at a time, from the movie's details."
+- "Split this app into Swift packages."
+- "Where should `MovieSummary` live, and what should the card that shows it be called?"
+- "Let the search results open sign-in."
+- "Review this app's architecture."
+
+An app built another way keeps its structure until you ask to change it; the skill then moves it into packages one buildable step at a time.
+
+The shapes use Swift 6 language mode and the SDK in Xcode 27 or later (Swift tools 6.4). The package template targets iOS 26; set it to your app's deployment target.
+
+## Works with
+
+The skill decides structure and shape, and leaves the code inside those shapes to skills that specialize in it. Install them alongside:
+
+- **SwiftUI:** Apple's `swiftui-specialist` in Xcode's coding assistant, [SwiftUI Expert](https://github.com/AvdLee/SwiftUI-Agent-Skill) or [SwiftUI Pro](https://github.com/twostraws/swiftui-agent-skill)
+- **Swift Concurrency:** [Swift Concurrency](https://github.com/AvdLee/Swift-Concurrency-Agent-Skill) or [Swift Concurrency Pro](https://github.com/twostraws/Swift-Concurrency-Agent-Skill)
+- **Swift Testing:** [Swift Testing Expert](https://github.com/AvdLee/Swift-Testing-Agent-Skill)
+
+Visual design and accessibility are out of scope.
+
+## Repository layout
+
+```
+.claude-plugin/              Claude Code plugin and marketplace manifests
+.codex-plugin/               Codex plugin manifest
+.agents/plugins/             Codex marketplace
+.github/                     checks, pull request labels and releases
+skills/swiftui-architect/
+├── SKILL.md                 entry point: the shape, rules, gotchas, references, workflows
+├── agents/openai.yaml       the skill's name in Codex
+└── references/
+    ├── modules.md           features and their boundaries, packages, the shared package, tests, reviews
+    ├── domain.md            models, errors, services, mocks, ports between features
+    ├── networking.md        the API package, its client and errors
+    ├── view-models.md       loading, paging, keyed loads, search, nested models
+    ├── views.md             the views a screen is made of, and its states
+    ├── composition.md       the app target: services, environment keys, screens
+    ├── navigation.md        destinations, the router, linking features, sheets and alerts
+    └── conventions.md       names and folders
+CLAUDE.md                    how to change the skill
+```
+
+## Contributing
+
+Issues and pull requests are welcome. Changes follow [CLAUDE.md](CLAUDE.md), which says what belongs in the skill, how its files are organized, the checks a change must pass, and the label its pull request carries.
 
 ## License
 

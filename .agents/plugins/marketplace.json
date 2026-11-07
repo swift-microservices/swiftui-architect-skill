@@ -1,0 +1,20 @@
+{
+  "name": "swiftui-architect-skill",
+  "interface": {
+    "displayName": "SwiftUI Architect"
+  },
+  "plugins": [
+    {
+      "name": "swiftui-architect",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

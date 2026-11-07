@@ -13,11 +13,11 @@ The app target is the composition root. It is the only module that imports every
 
 ```
 MoviesApp/
-├── MoviesApp.swift                 @main: client, services, Router, Scene
-├── App/ContentView.swift           TabView over Router.selectedTab
+├── MoviesApp.swift                 @main: client, services, Scene
+├── App/ContentView.swift           the window's Router and its TabView
 ├── Adapters/                       consumer-owned ports implemented over other features
 ├── Extensions/Environment/         one @Entry key per service protocol
-├── Navigation/                     Router, TabDestination, Destination, DestinationView
+├── Navigation/                     Router, TabDestination, Destination, DestinationView, navigationDestinations()
 └── Screens/                        one XScreen per screen
 ```
 
@@ -30,7 +30,6 @@ Build the client and every service and adapter in `init()`, store them as `let` 
 ```swift
 @main
 struct MoviesApp: App {
-    @State private var router = Router()
     private let discoverService: any DiscoverService
     private let movieDetailService: any MovieDetailService
     private let watchlistService: any WatchlistService
@@ -53,7 +52,6 @@ struct MoviesApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environment(router)
         }
         .environment(\.discoverService, discoverService)
         .environment(\.movieDetailService, movieDetailService)
@@ -87,10 +85,10 @@ extension EnvironmentValues {
 
 ```swift
 struct ContentView: View {
-    @Environment(Router.self) private var router
+    /// This window's navigation state: each window keeps its own tab and stacks.
+    @State private var router = Router()
 
     var body: some View {
-        @Bindable var router = router
         TabView(selection: $router.selectedTab) {
             Tab(.appTabDiscover, systemImage: "sparkles", value: .discover) {
                 DiscoverScreen()
@@ -102,6 +100,7 @@ struct ContentView: View {
                 SearchScreen()
             }
         }
+        .environment(router)
     }
 }
 ```
@@ -112,7 +111,7 @@ Each tab's title and icon are written here, in its `Tab`.
 
 An `XScreen` is a small app view that composes one screen: it reads services from the environment, builds the feature's view model, and passes it to the feature's public view. It's named after that view (`MovieDetailView` → `MovieDetailScreen`), and builds the view model inline, passing every service its [nested models](view-models.md#nested-models-and-modes) use too.
 
-A **tab XScreen** shows a tab's root screen. It owns the tab's `NavigationStack`, bound to the Router, and registers every destination type that can appear in that stack, once, at its root ([registering destinations](navigation.md#registering-destinations)). A feature that several tabs show supplies a root screen for each tab, and each gets its own tab XScreen.
+A **tab XScreen** shows a tab's root screen. It owns the tab's `NavigationStack`, bound to the Router, and applies `navigationDestinations()` at its root ([registering destinations](navigation.md#registering-destinations)). A feature that several tabs show supplies a root screen for each tab, and each gets its own tab XScreen.
 
 ```swift
 /// The Discover tab: its navigation stack, Discover at the root, and the screens it can push.
@@ -124,34 +123,22 @@ struct DiscoverScreen: View {
         @Bindable var router = router
         NavigationStack(path: $router[.discover]) {
             DiscoverView(viewModel: DiscoverViewModel(service: discoverService))
-                .navigationDestination(for: SharedDestination.self) { destination in
-                    DestinationView(destination: Destination(destination))
-                }
-                .navigationDestination(for: DiscoverDestination.self) { destination in
-                    DestinationView(destination: Destination(destination))
-                }
-                .navigationDestination(for: CatalogDestination.self) { destination in
-                    DestinationView(destination: Destination(destination))
-                }
+                .navigationDestinations()
         }
     }
 }
 ```
 
-An `XView` that presents a screen takes it from its XScreen, as a closure that returns `DestinationView` ([presenting a screen](navigation.md#presenting-a-screen)).
+An `XView` that presents a screen takes it from its XScreen, as a closure that builds it with `DestinationView` ([presenting a screen](navigation.md#presenting-a-screen)).
 
-A **pushed XScreen** takes only identifiers, never models, so the stack stays small, `Codable` and restorable. It owns no stack.
+A **pushed XScreen** takes only IDs, never models, so the stack stays small, `Codable` and restorable. It owns no stack.
 
 ```swift
 /// A movie, pushed onto whichever stack opened it.
 struct MovieDetailScreen: View {
     @Environment(\.movieDetailService) private var movieDetailService
     @Environment(\.watchlistMembershipService) private var watchlistMembershipService
-    private let movieID: MovieSummary.ID
-
-    init(movieID: MovieSummary.ID) {
-        self.movieID = movieID
-    }
+    let movieID: MovieSummary.ID
 
     var body: some View {
         MovieDetailView(
@@ -165,4 +152,4 @@ struct MovieDetailScreen: View {
 }
 ```
 
-Every XScreen has a preview that injects `.mock` services; a tab XScreen also injects `Router()`.
+Every XScreen has a preview, on the keys' default mocks; a tab XScreen's also injects `Router()`.
