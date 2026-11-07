@@ -9,22 +9,6 @@ Ask for a feature, a screen, a link between two features, a move into packages o
 
 ## The architecture
 
-```mermaid
-flowchart TD
-    App["App target<br/>builds services · composes screens · owns navigation"]
-    App --> Features
-    subgraph Features["Feature packages, one per capability"]
-        Discover
-        Catalog
-        Search
-        Watchlist
-        Account
-    end
-    Features --> Shared["Shared · SharedUI · SharedLive<br/>only what several features share"]
-    Features --> DesignSystem & Networking
-    Shared --> DesignSystem & Networking
-```
-
 - **A package per capability.** Each feature owns every screen of its capability and the data behind them. Features never import each other; they meet only in the app, which links their screens and connects their data through small ports.
 - **Boundaries the compiler enforces.** A feature splits into `Core` for its domain, `UI` for view models and views, and `Live` for services over the API. `Core` imports neither SwiftUI nor the networking client, and generated API types never leave the `Live` targets, so a crossing fails the build.
 - **A domain shaped for screens.** Models describe what the app shows, not what the API sends, and each feature has errors cased by what its screens tell apart.
