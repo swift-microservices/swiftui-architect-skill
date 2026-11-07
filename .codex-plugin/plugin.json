@@ -5,7 +5,7 @@
   "author": {
     "name": "Zaid Rahhawi"
   },
-  "repository": "https://github.com/the-braveknight/swiftui-architect-skill",
+  "repository": "https://github.com/swift-microservices/swiftui-architect-skill",
   "license": "MIT",
   "keywords": [
     "swift",
@@ -30,7 +30,7 @@
       "Read",
       "Write"
     ],
-    "websiteURL": "https://github.com/the-braveknight/swiftui-architect-skill",
+    "websiteURL": "https://github.com/swift-microservices/swiftui-architect-skill",
     "defaultPrompt": [
       "Add a screen that shows a movie's reviews, a page at a time, from the movie's details",
       "Split this app into Swift packages",

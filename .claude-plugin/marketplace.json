@@ -12,7 +12,7 @@
     {
       "name": "swiftui-architect",
       "description": "Architects modular SwiftUI apps as one Swift package per feature, split into domain, UI and live-service targets over a small shared package, with an app target that composes screens, injects services and owns navigation. Use when adding a feature or screen to a SwiftUI app, modularizing an iOS app into Swift packages or SPM modules, drawing module boundaries or dependency direction, designing domain models, services or MVVM view models (loading, errors, pagination, search), wiring navigation, routers, coordinators or dependency injection between features, deciding where a type belongs or what to name it, or reviewing an app's architecture, even when the user doesn't name the architecture.",
-      "repository": "https://github.com/the-braveknight/swiftui-architect-skill",
+      "repository": "https://github.com/swift-microservices/swiftui-architect-skill",
       "version": "2.1.0",
       "author": {
         "name": "Zaid Rahhawi"
