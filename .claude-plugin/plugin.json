@@ -1,6 +1,6 @@
 {
   "name": "swiftui-architect",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Architects modular SwiftUI apps. Use when adding a feature or screen, modularizing an iOS app, designing services, view models or navigation, or placing a type, even if no architecture is named.",
   "author": {
     "name": "Zaid Rahhawi"

@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/refs/heads/main/marketplace/marketplace.schema.json",
   "name": "swiftui-architect-skill",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "owner": {
     "name": "Zaid Rahhawi"
   },
@@ -13,7 +13,7 @@
       "name": "swiftui-architect",
       "description": "Architects modular SwiftUI apps. Use when adding a feature or screen, modularizing an iOS app, designing services, view models or navigation, or placing a type, even if no architecture is named.",
       "repository": "https://github.com/swift-microservices/swiftui-architect-skill",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Zaid Rahhawi"
       },
