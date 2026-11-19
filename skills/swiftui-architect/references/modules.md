@@ -30,7 +30,7 @@ Decide a boundary by change and meaning:
 
 Then check what a split costs. Only three things cross between features:
 - IDs, through destinations
-- narrow questions, through [ports](domain.md#cross-feature-services-consumer-owned-ports), as Catalog asks Watchlist whether a movie is kept
+- narrow questions, through ports (`domain.md#cross-feature-services-consumer-owned-ports`), as Catalog asks Watchlist whether a movie is kept
 - the shared vocabulary, through [the shared package](#shared-sharedui-and-sharedlive)
 
 A split that needs more, such as one side's own types or a port for most of what the other does, is one feature.
@@ -58,7 +58,7 @@ Each feature is one package with four targets:
 - XCore has no SwiftUI and no infrastructure, so the domain stays testable and usable by any UI.
 - XUI depends on XCore's protocols, never on XLive, so it builds, previews and tests on mocks alone.
 - XLive is the only feature target that sees the API.
-- The app links all three library targets: it builds live services from XLive and shows views from XUI ([composition](composition.md)).
+- The app links all three library targets: it builds live services from XLive and shows views from XUI (`composition.md`).
 
 ## Inside a feature
 
@@ -112,7 +112,7 @@ Packages/Catalog/
     └── Fixtures.swift
 ```
 
-Where each file goes: [folders](conventions.md#folders).
+Where each file goes: `conventions.md#folders`.
 
 ## Package.swift template
 
@@ -203,8 +203,8 @@ The shared package mirrors a feature's layers:
 | Target | Contains | Imports |
 |---|---|---|
 | `Shared` | `Domain/`: the vocabulary several features share (`MovieSummary`, `Page<Item>`) | Foundation only |
-| `SharedUI` | `Components/`: views several features show (`MovieSummaryCard`) and the shared screen states (`ContentUnavailableView.offline(retry:)`) with their copy. `Navigation/`: `SharedDestination` ([navigation](navigation.md#shareddestination-sharedui)) | `Shared`, `DesignSystem` |
-| `SharedLive` | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, and `Page+TMDB.swift` for the API's page numbers as `nextPage`), tested in `SharedLiveTests`. `Services/`: a step on the client that several features' live services share ([live services](domain.md#live-services)) | `Shared`, `Networking` |
+| `SharedUI` | `Components/`: views several features show (`MovieSummaryCard`) and the shared screen states (`ContentUnavailableView.offline(retry:)`) with their copy. `Navigation/`: `SharedDestination` (`navigation.md#shareddestination-sharedui`) | `Shared`, `DesignSystem` |
+| `SharedLive` | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, and `Page+TMDB.swift` for the API's page numbers as `nextPage`), tested in `SharedLiveTests`. `Services/`: a step on the client that several features' live services share (`domain.md#live-services`) | `Shared`, `Networking` |
 
 ```swift
 /// One page of a paginated list, as a service returns it.
@@ -244,7 +244,7 @@ It never knows a feature model, service, destination or screen, has no strings o
 
 ## Networking and other infrastructure
 
-`Networking` generates the API's types and client and wraps them in the app's client ([networking](networking.md)). It and any other infrastructure package, such as analytics, are imported by the Live targets, XTests and the app, never by XCore or XUI.
+`Networking` generates the API's types and client and wraps them in the app's client (`networking.md`). It and any other infrastructure package, such as analytics, are imported by the Live targets, XTests and the app, never by XCore or XUI.
 
 They import no feature. What they need from one, such as the signed-in account's current token for an auth header, the app passes in as a closure when it builds their clients.
 
@@ -265,7 +265,7 @@ Each feature package builds, previews and tests without the app. Test what a bug
 
 | Behavior | Tested in |
 |---|---|
-| A screen's own rules: what it loads, its failure rule, paging, stale results ([which tests](view-models.md#testing-view-models)) | `XTests/ViewModels`, with private actor stubs |
+| A screen's own rules: what it loads, its failure rule, paging, stale results (`view-models.md#testing-view-models`) | `XTests/ViewModels`, with private actor stubs |
 | Mapping: dropped incomplete items, paging metadata | `XTests/Live` and `SharedLiveTests`, with hand-built generated types |
 | Requests, decoding, error classification and cancellation | `NetworkingTests`, with a stub transport |
 | `Destination` mappings that aren't one-to-one, and adapters | app tests |

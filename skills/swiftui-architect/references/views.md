@@ -1,6 +1,6 @@
 # Views
 
-A screen is a small family of views in its feature's XUI target: `XView`, the public entry point, renders `XPhaseView`, which picks what to show from where the screen's loads stand, and `XContentView` lays the content out. Keep them plain, native SwiftUI: a view model in, views out, `NavigationLink(value:)` for navigation. For SwiftUI technique inside these shapes, use a SwiftUI skill ([related skills](../SKILL.md#related-skills)).
+A screen is a small family of views in its feature's XUI target: `XView`, the public entry point, renders `XPhaseView`, which picks what to show from where the screen's loads stand, and `XContentView` lays the content out. Keep them plain, native SwiftUI: a view model in, views out, `NavigationLink(value:)` for navigation. For SwiftUI technique inside these shapes, use a SwiftUI skill ([related skills](../SKILL.md#limitations)).
 
 ## Contents
 - File roles
@@ -14,17 +14,17 @@ A screen is a small family of views in its feature's XUI target: `XView`, the pu
 
 | File | Role |
 |---|---|
-| `XView` | Public entry point. Owns the view model and puts it in the environment; starts the screen's loads; applies what every state shares (title, search field, toolbars and the sheets they open); presents the screens the app passes in ([presenting a screen](navigation.md#presenting-a-screen)); renders `XPhaseView` |
+| `XView` | Public entry point. Owns the view model and puts it in the environment; starts the screen's loads; applies what every state shares (title, search field, toolbars and the sheets they open); presents the screens the app passes in (`navigation.md#presenting-a-screen`); renders `XPhaseView` |
 | `XPhaseView` | Picks what to show from where the loads stand, as `AsyncImage` does from its phase: the mode when it's active, then the content, the error, progress or the empty state. It reads the view model's properties; there's no phase type |
 | `XContentView` | Lays out the loaded values it's given in its scroll container, one view per resource or section |
 | `XSearchPhaseView`, `XSearchContentView`, … | A [mode](#modes)'s own family, shaped like the screen's |
 | `XHeader`, `XRail`, `XRow`, `XCard`, `X…View` | One section of this screen, taking only the values it shows |
-| `Components/Cards/`, `Components/Rails/`, … | Views several of the feature's screens show, named for what they are ([inside a feature](modules.md#inside-a-feature)) |
+| `Components/Cards/`, `Components/Rails/`, … | Views several of the feature's screens show, named for what they are (`modules.md#inside-a-feature`) |
 | `X…NextPageFooter` | Loads the next page of a paged resource while it's on screen, offers a retry when that fails, and draws nothing after the last page |
 | `XToolbar` | A `ToolbarContent` struct |
 | `Model+Title.swift` | Display mappings from XCore values to `LocalizedStringResource`, never `Text` or `Image` (`Department+Title.swift`) |
 
-Where each file goes: [folders](conventions.md#folders). A feature exports one public view per screen (`MovieDetailView`, `MovieCastView`) and its view models; everything else is internal. One type per file.
+Where each file goes: `conventions.md#folders`. A feature exports one public view per screen (`MovieDetailView`, `MovieCastView`) and its view models; everything else is internal. One type per file.
 
 ## XView, XPhaseView and XContentView
 
@@ -101,12 +101,12 @@ struct DiscoverContentView: View {
 }
 ```
 
-- `XView` never decides between states: no `if`, `switch` or overlay in its body picks what shows, which is `XPhaseView`'s job. It starts the screen's loads with `.task`, and `.task(id:)` for a [keyed resource](view-models.md#keyed-resources). `.refreshable` calls `refresh()` on a screen with a paged list, and `load()` on any other. Never start loads on the progress view: it goes away when the first data arrives, and cancelling its task cancels the loads still running.
+- `XView` never decides between states: no `if`, `switch` or overlay in its body picks what shows, which is `XPhaseView`'s job. It starts the screen's loads with `.task`, and `.task(id:)` for a keyed resource (`view-models.md#keyed-resources`). `.refreshable` calls `refresh()` on a screen with a paged list, and `load()` on any other. Never start loads on the progress view: it goes away when the first data arrives, and cancelling its task cancels the loads still running.
 - What every state shares goes on `XView`, such as a control over the results, so it stays up while the screen loads, fails or shows content.
 - `XPhaseView` checks in a fixed order: the content whenever there is data, the error only when there's nothing to show, progress while the load runs, then the empty state where the design has one. It follows the resource the content can't do without and passes the others along.
 - A screen that loads nothing, such as a form, has no `XPhaseView`: `XView` renders `XContentView`.
-- A screen with a [filter](view-models.md#filtering-loaded-values) shows the content while something matches, then `ContentUnavailableView.search` while there's data but nothing matches, ahead of the error and progress.
-- `XContentView` takes values, owns the scroll container and lays out one view per resource or section. What acts inside it, such as the paging footer or a row's swipe action, reads the view model from the environment, and so does `XContentView` itself to bind a presentation only the content opens ([sheets, covers and alerts](navigation.md#sheets-covers-and-alerts)).
+- A screen with a filter (`view-models.md#filtering-loaded-values`) shows the content while something matches, then `ContentUnavailableView.search` while there's data but nothing matches, ahead of the error and progress.
+- `XContentView` takes values, owns the scroll container and lays out one view per resource or section. What acts inside it, such as the paging footer or a row's swipe action, reads the view model from the environment, and so does `XContentView` itself to bind a presentation only the content opens (`navigation.md#sheets-covers-and-alerts`).
 - A title from loaded data goes with that data. When the content is the thing the title names, the title goes in `XContentView` (`.navigationTitle(movie.title)`). When the thing loads beside the content, the title goes on `XView`, so it stays up in every state (`.navigationTitle(viewModel.genre?.name ?? "")`).
 
 ## What a screen shows without content
@@ -121,11 +121,11 @@ struct DiscoverContentView: View {
 
 - The error presets (`offline`, `notFound`, `unavailable`) live in SharedUI with their copy, because every screen must say the same thing about the same failure. A feature has no error view of its own.
 - Where the design has no empty state, an empty answer shows nothing.
-- Only the resource the content can't do without takes over the screen. A failed next page shows a short inline retry; a resource the screen can do without, such as the featured movies, is left out; a [keyed section](view-models.md#keyed-resources) shows its own progress and error.
+- Only the resource the content can't do without takes over the screen. A failed next page shows a short inline retry; a resource the screen can do without, such as the featured movies, is left out; a keyed section (`view-models.md#keyed-resources`) shows its own progress and error.
 
 ## Modes
 
-A [mode](view-models.md#modes), such as a search within a genre, replaces the screen's content while it's active. `XView` binds its field and runs its tasks beside the screen's, and `XPhaseView` picks it first:
+A mode (`view-models.md#modes`), such as a search within a genre, replaces the screen's content while it's active. `XView` binds its field and runs its tasks beside the screen's, and `XPhaseView` picks it first:
 
 ```swift
 // GenreDetailView.swift
@@ -166,7 +166,7 @@ struct GenreDetailPhaseView: View {
 ```
 
 - The search field lives on `XView`, so it stays up while the screen loads, fails or searches.
-- The phase view switches on `isActive`, which changes when words are applied ([typed text](view-models.md#keyed-resources)), not on each keystroke.
+- The phase view switches on `isActive`, which changes when words are applied (typed text in `view-models.md#keyed-resources`), not on each keystroke.
 - The mode's family mirrors the screen's: a phase view checking its results in the same order (ending in `ContentUnavailableView.search`), a content view with its own `.refreshable`, and its own paging footer.
 - The mode sits beside the content, never inside `XContentView`, which exists only once the screen's own data has loaded.
 
@@ -212,4 +212,4 @@ A view below `XView` reads a view model from the environment and crashes at runt
 }
 ```
 
-To click through a feature's own screens in previews, see [navigation previews](navigation.md#previews).
+To click through a feature's own screens in previews, see `navigation.md#previews`.

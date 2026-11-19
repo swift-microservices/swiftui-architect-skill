@@ -5,9 +5,9 @@ Run from anywhere after every change to the skill, and fix until it passes:
 
     python3 .github/scripts/check_skill.py
 
-It checks what a script can: the frontmatter, SKILL.md's size, the references and their
-Contents lists, links and anchors, the plugin manifests, and the code style of every Swift
-example. It exits non-zero when any check fails. The review that needs judgment is the
+It checks what a script can: the frontmatter, SKILL.md's size and sections, the references
+and their Contents lists, links, pointers and anchors, the plugin manifests, and the code style
+of every Swift example. It exits non-zero when any check fails. The review that needs judgment is the
 checklist in CLAUDE.md.
 """
 
@@ -24,11 +24,15 @@ REFERENCES = SKILL / "references"
 
 # Limits from the Agent Skills specification and Claude Code's skill loading.
 MAX_NAME = 64
-MAX_DESCRIPTION = 800  # below the specification's 1,024: the listing is paid on every turn
+MAX_DESCRIPTION = 200  # SkillEvaluator's limit, far below the specification's 1,024: the listing is paid on every turn
 MAX_SKILL_LINES = 500
 MAX_SKILL_TOKENS = 5000  # recommended for the SKILL.md body; also what compaction keeps
 CHARS_PER_TOKEN = 2.9  # Claude's tokenizer measures this skill's SKILL.md at about 2.95
 CONTENTS_AFTER_LINES = 100
+TRIGGER_WITHIN = 60  # some harnesses list only a description's first 60 characters
+MAX_TAGS = 5
+# The headings SkillEvaluator's quality check looks for that SKILL.md's sections fit.
+SKILL_SECTIONS = ["## Purpose", "## Prerequisites", "## Examples", "## Common Issues", "## References", "## Instructions", "## Limitations"]
 
 failures: list[str] = []
 
@@ -91,16 +95,22 @@ def check_frontmatter(skill_text: str) -> str:
         fail("SKILL.md: the frontmatter must open the file between --- lines")
         return ""
 
-    fields = {}
+    fields: dict[str, str] = {}
+    metadata: dict[str, str] = {}
     for line in match.group(1).splitlines():
-        key, separator, value = line.partition(":")
-        if separator and re.fullmatch(r"[a-z][a-z0-9_-]*", key):
-            fields[key] = value.strip()
-        else:
+        nested = line.startswith("  ") and "metadata" in fields
+        key, separator, value = line.strip().partition(":") if nested else line.partition(":")
+        if not separator or not re.fullmatch(r"[a-z][a-z0-9_-]*", key):
             fail(f"frontmatter: keep each field on one line: {line[:60]}")
+        elif nested:
+            metadata[key] = value.strip()
+        else:
+            fields[key] = value.strip()
 
-    if set(fields) != {"name", "description", "license"}:
-        fail(f"frontmatter: holds only name, description and license, found {sorted(fields)}")
+    if set(fields) != {"name", "description", "license", "metadata"}:
+        fail(f"frontmatter: holds only name, description, license and metadata, found {sorted(fields)}")
+    if fields.get("metadata") or set(metadata) != {"author", "tags"}:
+        fail(f"frontmatter: metadata holds only author and tags, found {sorted(metadata)}")
 
     name = fields.get("name", "")
     if len(name) > MAX_NAME or not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name):
@@ -117,8 +127,8 @@ def check_frontmatter(skill_text: str) -> str:
         fail("frontmatter: description may not contain angle brackets or XML tags")
     if re.match(r"(I|You|We|This skill)\b", description):
         fail("frontmatter: description is written in the third person, starting with what the skill does")
-    if "Use when" not in description:
-        fail("frontmatter: description says when to use the skill (Use when …)")
+    if "Use when" not in description[:TRIGGER_WITHIN]:
+        fail(f"frontmatter: description says when to use the skill (Use when …) in its first {TRIGGER_WITHIN} characters")
 
     if shutil.which("ruby"):
         script = 'require "yaml"; YAML.safe_load(File.read(ARGV[0], encoding: "UTF-8")[/\\A---\\n(.*?)\\n---\\n/m, 1])'
@@ -129,6 +139,12 @@ def check_frontmatter(skill_text: str) -> str:
     plugin = json.loads(read(ROOT / ".claude-plugin" / "plugin.json"))
     if fields.get("license") != plugin.get("license"):
         fail(f"frontmatter: license {fields.get('license')!r} must match plugin.json's {plugin.get('license')!r}")
+    author = plugin.get("author", {}).get("name")
+    if metadata.get("author") != author:
+        fail(f"frontmatter: metadata.author {metadata.get('author')!r} must match plugin.json's {author!r}")
+    tags = [tag.strip() for tag in metadata.get("tags", "").split(",")]
+    if not 0 < len(tags) <= MAX_TAGS or not all(re.fullmatch(r"[a-z0-9-]+", tag) for tag in tags):
+        fail(f"frontmatter: metadata.tags is one string of 1 to {MAX_TAGS} comma-separated lowercase tags")
 
     return description
 
@@ -143,6 +159,10 @@ def check_skill_size(skill_text: str) -> None:
         fail(f"SKILL.md: {lines} lines, under {MAX_SKILL_LINES}")
     if tokens > MAX_SKILL_TOKENS:
         fail(f"SKILL.md: about {tokens:.0f} tokens, under {MAX_SKILL_TOKENS}")
+
+    sections = [line for _, line in outside_code(skill_text) if line.startswith("## ")]
+    if [section for section in sections if section in SKILL_SECTIONS] != SKILL_SECTIONS:
+        fail(f"SKILL.md: keeps these sections, in order: {', '.join(SKILL_SECTIONS)}")
 
     start = skill_text.find("\n## References")
     end = skill_text.find("\n## ", start + 1)
@@ -194,6 +214,33 @@ def check_links() -> None:
                     anchors = {slug(heading) for heading in headings(read(destination))}
                     if anchor not in anchors:
                         fail(f"{relative(path)}:{number}: no heading for #{anchor}")
+
+
+def check_pointers() -> None:
+    """A reference points to another in plain text, `view-models.md#keyed-resources`, never by a link."""
+    link = re.compile(r"\[[^\]]*\]\(([a-z-]+\.md)(?:#[^)]*)?\)")
+    pointer = re.compile(r"`((?:references/)?[a-z-]+\.md)(?:#([\w-]+))?`")
+    checklist_pointer = re.compile(r"\b(references/[a-z-]+\.md)(?:#([\w-]+))?")
+    sources = [(path, pointer, outside_code(read(path))) for path in sorted(REFERENCES.glob("*.md"))]
+    # SKILL.md's checklists, in code blocks, point to references; its prose links to them.
+    skill_text = read(SKILL / "SKILL.md")
+    prose = {number for number, _ in outside_code(skill_text)}
+    checklists = [(number, line) for number, line in enumerate(skill_text.splitlines(), 1) if number not in prose]
+    sources.append((SKILL / "SKILL.md", checklist_pointer, checklists))
+    for path, pattern, lines in sources:
+        for number, line in lines:
+            where = f"{relative(path)}:{number}"
+            if path.parent == REFERENCES:
+                for target in link.findall(line):
+                    fail(f"{where}: links to {target}; point to it in plain text, `{target}#anchor`")
+            for target, anchor in pattern.findall(line):
+                destination = (path.parent / target) if path.parent == REFERENCES else (SKILL / target)
+                if path.parent == REFERENCES and target.startswith("references/"):
+                    fail(f"{where}: a reference points to {target} without the references/ folder")
+                elif not destination.exists():
+                    fail(f"{where}: no file for {target}")
+                elif anchor and anchor not in {slug(heading) for heading in headings(read(destination))}:
+                    fail(f"{where}: no heading for {target}#{anchor}")
 
 
 # MARK: - Manifests
@@ -298,6 +345,7 @@ def main() -> int:
     check_skill_size(skill_text)
     check_references(skill_text, readme_text)
     check_links()
+    check_pointers()
     check_manifests(description)
     check_swift_examples()
     check_plugin()

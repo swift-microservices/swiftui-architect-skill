@@ -1,6 +1,6 @@
 # View models
 
-A view model loads what one screen shows and exposes it as state. Services do the work (mapping and aggregation) and return view-ready domain values; the view model assigns them and tracks loading, errors and paging. How to write the loads inside these shapes (tasks, isolation, task groups) is a Swift Concurrency skill's subject ([related skills](../SKILL.md#related-skills)).
+A view model loads what one screen shows and exposes it as state. Services do the work (mapping and aggregation) and return view-ready domain values; the view model assigns them and tracks loading, errors and paging. How to write the loads inside these shapes (tasks, isolation, task groups) is a Swift Concurrency skill's subject ([related skills](../SKILL.md#limitations)).
 
 ## Contents
 - The shape
@@ -52,7 +52,7 @@ public final class MovieCastViewModel {
 
 - `@MainActor @Observable public final class`, one per screen, pushed, presented or a tab's root. A part of a screen gets a [nested model](#nested-models-and-modes) instead.
 - `public init` takes IDs and services and only assigns. The app builds a view model on every `body` pass and the view keeps the first, so `init` starts no tasks, subscriptions or I/O.
-- State is `private(set)`, except three kinds of plain `var` that views bind or set ([presentations](navigation.md#sheets-covers-and-alerts)):
+- State is `private(set)`, except three kinds of plain `var` that views bind or set (`navigation.md#sheets-covers-and-alerts`):
   - input, such as a search field's `text`
   - what the screen presents (`isFilterPresented`), or the value a presentation is about (`itemToRemove`)
   - a draft that a sheet edits before it's applied (`filterDraft`)
@@ -68,11 +68,11 @@ A screen can have data while it refreshes, data and a failed refresh, or an erro
 |---|---|
 | The data, named for what it is (`cast`, `movie`) | An empty collection, or `nil` for a single value, until the first successful load. A failed refresh keeps it |
 | `isLoading…` (`isLoadingCast`) | Whether its load is running. It starts `true` when the screen loads it on appearing, so the first frame shows progress rather than the empty state |
-| `…Error` (`castError`) | The error its views switch over, usually the feature's `XError` ([domain](domain.md#errors)) |
+| `…Error` (`castError`) | The error its views switch over, usually the feature's `XError` (`domain.md#errors`) |
 
 - A load sets `isLoading…` when it starts and clears it when it succeeds or fails. On success it assigns the data and clears the error. On failure it keeps the data and records the error, so the error stays on screen through a retry until a load succeeds.
 - An error that isn't the property's type records the type's fallback case (`.unavailable`).
-- Cancellation is never a failure: a cancelled load returns without changing anything, `isLoading…` included. `XView` runs `load()` from `.task`, which cancels it when the view disappears and runs it again, as a silent refresh, when the view reappears ([views](views.md#xview-xphaseview-and-xcontentview)); that load, or a new key's, ends the loading. A cancelled load can finish after its replacement starts, so a `defer` that clears `isLoading…` would hide the progress of the load still running. The networking client delivers a cancelled request as `CancellationError` ([networking](networking.md#errors-and-cancellation)).
+- Cancellation is never a failure: a cancelled load returns without changing anything, `isLoading…` included. `XView` runs `load()` from `.task`, which cancels it when the view disappears and runs it again, as a silent refresh, when the view reappears (`views.md#xview-xphaseview-and-xcontentview`); that load, or a new key's, ends the loading. A cancelled load can finish after its replacement starts, so a `defer` that clears `isLoading…` would hide the progress of the load still running. The networking client delivers a cancelled request as `CancellationError` (`networking.md#errors-and-cancellation`).
 - A load never guards against a call already in flight. Overlapping loads fetch the same data, so the last to finish wins, and a guard would block a load that `.task` restarted, such as a paging footer's after it scrolls out and back in.
 - A resource keeps only the state its views read. One the screen leaves out when it fails, such as Discover's featured movies, keeps just its data: its load assigns on success and does nothing on failure.
 
@@ -241,7 +241,7 @@ public final class WatchlistViewModel {
 
 - Never work the matches out in a view's `body` or in the collection given to `ForEach`: the view model holds them, so the views only read them and tests can check them.
 - The matches follow each keystroke, with no pause and no `.task(id:)`, because nothing loads.
-- What the phase view shows while nothing matches: [views](views.md#xview-xphaseview-and-xcontentview).
+- What the phase view shows while nothing matches: `views.md#xview-xphaseview-and-xcontentview`.
 
 ## Nested models and modes
 
@@ -337,11 +337,11 @@ extension GenreDetailViewModel {
 }
 ```
 
-`GenreDetailService` gains `movies(genreID:matching:page:)` for it, and the screen's phase view picks the mode in its first branch ([views](views.md#modes)). Its `load()` does nothing while `query` is empty, since `.task(id: query)` also runs when the screen appears and when the field is cleared.
+`GenreDetailService` gains `movies(genreID:matching:page:)` for it, and the screen's phase view picks the mode in its first branch (`views.md#modes`). Its `load()` does nothing while `query` is empty, since `.task(id: query)` also runs when the screen appears and when the field is cleared.
 
 ## Testing view models
 
-Swift Testing, `@MainActor` suites, `@testable import XUI`, and a private actor stub of the service in each test file. Tests that interleave two loads use a stub that holds a request until the test releases it. How to write the tests themselves is a Swift Testing skill's subject ([related skills](../SKILL.md#related-skills)).
+Swift Testing, `@MainActor` suites, `@testable import XUI`, and a private actor stub of the service in each test file. Tests that interleave two loads use a stub that holds a request until the test releases it. How to write the tests themselves is a Swift Testing skill's subject ([related skills](../SKILL.md#limitations)).
 
 Test the rules a bug would break on this screen, not the shape every view model shares:
 - What a load asks the service for: the ID, key or page.

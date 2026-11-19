@@ -35,7 +35,7 @@ public struct Movie: Identifiable, Equatable, Sendable {
 - **Value types, `Equatable` and `Sendable`.** They cross from live services to the main actor, and an `@Observable` view model only skips redrawing for an equal value when it can compare them. `Identifiable` when a list shows them or a screen links to them.
 - **`Identifiable` names the id's type.** Store `public let id: Int`, or whatever the id really is, and refer to it as the model's `ID`, with no `typealias ID`. A whole thing and its summary share one id, and signatures name the summary's, which lists and destinations carry: `movie(id: MovieSummary.ID) -> Movie`.
 - **The whole thing is a plain noun; what a list shows of it adds `Summary`**: `Movie` and `MovieSummary`. A summary links to its whole thing by id. A model name never ends in `Detail`, which only screens use, or in a transport word (`DTO`, `Response`).
-- **A model is complete for its role.** When reusing a model would leave fields empty or filled with placeholders, that role gets its own type. The whole thing leaves out what loads separately, such as a [paged list](view-models.md#a-thing-and-its-paged-list).
+- **A model is complete for its role.** When reusing a model would leave fields empty or filled with placeholders, that role gets its own type. The whole thing leaves out what loads separately, such as a paged list (`view-models.md#a-thing-and-its-paged-list`).
 - **Each fact is stated once, so an illogical value can't be written.** When two properties could disagree, carry one inside the other and compute it, rather than checking in an initializer:
 
 ```swift
@@ -78,7 +78,7 @@ public protocol MovieDetailService: Sendable {
 }
 ```
 
-- Methods return domain values ready to show. A paged list returns `Page<Item>` from Shared; a screen that pages one thing's list has [a method for each](view-models.md#a-thing-and-its-paged-list). Never wrap a page in a feature type to carry more: a count the screen shows is a read of its own.
+- Methods return domain values ready to show. A paged list returns `Page<Item>` from Shared; a screen that pages one thing's list has a method for each (`view-models.md#a-thing-and-its-paged-list`). Never wrap a page in a feature type to carry more: a count the screen shows is a read of its own.
 - Methods use untyped `throws` and name the error in the doc comment. Cancellation must reach the view model as `CancellationError`, which `throws(CatalogError)` couldn't carry.
 - Protocols refine `Sendable`, so `any MovieDetailService` crosses into the environment and a main-actor view model.
 - Nothing else sits between a view model and its sources: no repository, use case, interactor or manager. A live service calls the client itself.
@@ -130,8 +130,8 @@ public struct TMDBMovieDetailService: MovieDetailService {
 ```
 
 - A struct's methods are `@concurrent`, so requests and mapping run off the main actor. An actor's methods stay isolated to it, which already keeps them off the main actor; `@concurrent` would cut them off from its state. Protocol requirements and mocks stay unannotated.
-- Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer: a list item missing a required field is dropped, and a whole response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in SharedLive ([modules](modules.md#shared-sharedui-and-sharedlive)).
-- The feature's error maps from the client's error in an initializer, such as a 404 to `.notFound`. `CancellationError` passes through untouched ([networking](networking.md#errors-and-cancellation)).
+- Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer: a list item missing a required field is dropped, and a whole response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in SharedLive (`modules.md#shared-sharedui-and-sharedlive`).
+- The feature's error maps from the client's error in an initializer, such as a 404 to `.notFound`. `CancellationError` passes through untouched (`networking.md#errors-and-cancellation`).
 - A client step that two of a feature's live services share, such as reading extra artwork, is an internal extension on the client in XLive.
 - A client step that several features share, such as discovering movies by genre for Discover and for Search's filter, is a public extension in SharedLive's `Services/` (`TMDBClient+DiscoverMovies.swift`). It takes Shared values, returns a Shared model, and throws the client's error for each feature to map to its own.
 
@@ -172,7 +172,7 @@ extension MovieDetailService where Self == MockMovieDetailService {
 
 - A scenario lets each preview show one state the screen really has; `.mock` stays the plain sample.
 - A mock that keeps state, such as a watchlist that remembers toggles, is an actor, and `.mock` returns a fresh instance.
-- Tests use private stubs in XTests instead ([testing](modules.md#testing)).
+- Tests use private stubs in XTests instead (`modules.md#testing`).
 
 ## Cross-feature services: consumer-owned ports
 

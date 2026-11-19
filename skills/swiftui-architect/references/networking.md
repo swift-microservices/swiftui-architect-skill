@@ -46,7 +46,7 @@ public struct TMDBClient: Sendable {
 }
 ```
 
-- Methods keep the spec's operation names (`movie-details` → `movieDetails(id:)`), so the client reads like the spec it wraps. Swift naming starts at the domain ([domain](domain.md#naming-services-and-their-methods)).
+- Methods keep the spec's operation names (`movie-details` → `movieDetails(id:)`), so the client reads like the spec it wraps. Swift naming starts at the domain (`domain.md#naming-services-and-their-methods`).
 - Each method handles every documented response, with no `default`, so a response added to the spec fails to build until it's handled.
 - An API that wraps every payload in an envelope (`{ "data": … }`) is unwrapped here, so XLive maps the payload itself.
 - The app builds the client with a URL session; tests build it over a stub transport.
@@ -75,4 +75,4 @@ public enum TMDBError: Error, Equatable {
 
 ## Testing
 
-`NetworkingTests` drives the client through a stub transport: the requests it builds, the responses it decodes, and the classification, cancellation included. Features never test the network; their XLive tests map hand-built API types ([testing](modules.md#testing)).
+`NetworkingTests` drives the client through a stub transport: the requests it builds, the responses it decodes, and the classification, cancellation included. Features never test the network; their XLive tests map hand-built API types (`modules.md#testing`).
