@@ -21,7 +21,7 @@ MoviesApp/
 └── Screens/                        one XScreen per screen
 ```
 
-The app target may use MainActor default isolation, since it only composes SwiftUI; packages never do ([modules](modules.md#packageswift-template)).
+The app target may use MainActor default isolation, since it only composes SwiftUI; packages never do (`modules.md#packageswift-template`).
 
 ## `<AppName>App.swift`
 
@@ -109,9 +109,9 @@ Each tab's title and icon are written here, in its `Tab`.
 
 ## XScreen: tab and pushed
 
-An `XScreen` is a small app view that composes one screen: it reads services from the environment, builds the feature's view model, and passes it to the feature's public view. It's named after that view (`MovieDetailView` → `MovieDetailScreen`), and builds the view model inline, passing every service its [nested models](view-models.md#nested-models-and-modes) use too.
+An `XScreen` is a small app view that composes one screen: it reads services from the environment, builds the feature's view model, and passes it to the feature's public view. It's named after that view (`MovieDetailView` → `MovieDetailScreen`), and builds the view model inline, passing every service its nested models (`view-models.md#nested-models-and-modes`) use too.
 
-A **tab XScreen** shows a tab's root screen. It owns the tab's `NavigationStack`, bound to the Router, and applies `navigationDestinations()` at its root ([registering destinations](navigation.md#registering-destinations)). A feature that several tabs show supplies a root screen for each tab, and each gets its own tab XScreen.
+A **tab XScreen** shows a tab's root screen. It owns the tab's `NavigationStack`, bound to the Router, and applies `navigationDestinations()` at its root (`navigation.md#registering-destinations`). A feature that several tabs show supplies a root screen for each tab, and each gets its own tab XScreen.
 
 ```swift
 /// The Discover tab: its navigation stack, Discover at the root, and the screens it can push.
@@ -129,7 +129,7 @@ struct DiscoverScreen: View {
 }
 ```
 
-An `XView` that presents a screen takes it from its XScreen, as a closure that builds it with `DestinationView` ([presenting a screen](navigation.md#presenting-a-screen)).
+An `XView` that presents a screen takes it from its XScreen, as a closure that builds it with `DestinationView` (`navigation.md#presenting-a-screen`).
 
 A **pushed XScreen** takes only IDs, never models, so the stack stays small, `Codable` and restorable. It owns no stack.
 

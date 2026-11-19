@@ -6,13 +6,13 @@
 
 ## Naming
 
-`X` is a feature's name in UpperCamelCase (`Catalog`), or one of its screens' (`MovieCast`); `x` is lowerCamelCase. A screen uses its noun in every slot (`MovieCastService`, `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`), and what spans the feature uses the feature's name (`CatalogDestination`, `CatalogError`). Which name a screen, model or shared view takes inside a feature is in [inside a feature](modules.md#inside-a-feature).
+`X` is a feature's name in UpperCamelCase (`Catalog`), or one of its screens' (`MovieCast`); `x` is lowerCamelCase. A screen uses its noun in every slot (`MovieCastService`, `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`), and what spans the feature uses the feature's name (`CatalogDestination`, `CatalogError`). Which name a screen, model or shared view takes inside a feature is in `modules.md#inside-a-feature`.
 
 Names follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/): they read as English at the call site, name things by role, and avoid abbreviations. Things and side-effect-free reads are nouns, changes are imperative verbs, and Booleans read as assertions.
 
 | Kind | Name | Example |
 |---|---|---|
-| Feature package | the capability, never a screen, a tab that gathers several capabilities or a model other features show ([defining features](modules.md#defining-features)) | `Discover`, `Catalog`, `Watchlist`; not `MovieDetail`, `Home` or `Movie` |
+| Feature package | the capability, never a screen, a tab that gathers several capabilities or a model other features show (`modules.md#defining-features`) | `Discover`, `Catalog`, `Watchlist`; not `MovieDetail`, `Home` or `Movie` |
 | Feature targets | `XCore`, `XUI`, `XLive`, `XTests` | `CatalogUI` |
 | Domain model | a plain noun for the whole thing; never ends in `Detail` or a transport word | `Movie`, `Genre`, `DiscoverShelf` |
 | What a list shows of a model | the model's name + `Summary` | `MovieSummary` |
@@ -27,7 +27,7 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | API client and its error | the API's name + `Client` / `Error`; client methods keep the spec's operation names | `TMDBClient.movieDetails(id:)`, `TMDBError` |
 | View model | `XViewModel`, one per screen | `MovieCastViewModel` |
 | View model actions | imperative verbs; `refresh()` beside `load()` on a screen with a paged list | `load()`, `refresh()`, `loadNextShelvesPage()`, `select(_:)` |
-| Resource state | the data, `isLoading…`, `…Error` ([view models](view-models.md#one-resource-data-activity-and-error)) | `shelves`, `isLoadingShelves`, `shelvesError` |
+| Resource state | the data, `isLoading…`, `…Error` (`view-models.md#one-resource-data-activity-and-error`) | `shelves`, `isLoadingShelves`, `shelvesError` |
 | Paged resource state | adds `next…Page`, `isLoadingNext…Page`, `next…PageError` | `nextShelvesPage`, `nextShelvesPageError` |
 | A key | named for what it holds: what the user picked, or the words the results are for | `selectedDepartment`, `query` |
 | Bound input and its matches | the input, and the values matching it | `text`, `matchingItems` |

@@ -103,7 +103,7 @@ The skill decides the shapes; these skills cover the code inside them:
 .codex-plugin/               Codex plugin manifest
 .agents/plugins/             Codex marketplace
 skills/swiftui-architect/
-├── SKILL.md                 what every task needs: the shape, rules, gotchas, workflows
+├── SKILL.md                 what every task needs: the shape, rules, common issues, workflows
 ├── agents/openai.yaml       the skill's name in Codex
 └── references/              read when a task reaches their topic
     ├── modules.md           features and their boundaries, packages, the shared package, tests, reviews

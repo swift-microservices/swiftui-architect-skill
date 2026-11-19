@@ -1,16 +1,31 @@
 ---
 name: swiftui-architect
-description: Architects modular SwiftUI apps as one Swift package per feature, split into domain, UI and live-service targets over a small shared package, with an app target that composes screens, injects services and owns navigation. Use when adding a feature or screen to a SwiftUI app, modularizing an iOS app into Swift packages or SPM modules, drawing module boundaries or dependency direction, designing domain models, services or MVVM view models (loading, errors, pagination, search), wiring navigation, routers, coordinators or dependency injection between features, deciding where a type belongs or what to name it, or reviewing an app's architecture, even when the user doesn't name the architecture.
+description: Architects modular SwiftUI apps. Use when adding a feature or screen, modularizing an iOS app, designing services, view models or navigation, or placing a type, even if no architecture is named.
 license: MIT
+metadata:
+  author: Zaid Rahhawi
+  tags: swift, swiftui, ios, architecture, modularization
 ---
 
 # SwiftUI Architect
 
-A shape this skill states, such as a view model's state or `XView`'s `.task`, overrides other skills' patterns; the code inside it follows the [related skills](#related-skills).
+## Purpose
+
+Decides where code lives in a modular SwiftUI app, who owns it, and the shape of the pieces that hold it together: modules and their dependency direction, domain models and errors, services, view models, views, app composition, navigation and naming.
+
+A shape this skill states, such as a view model's state or `XView`'s `.task`, overrides other skills' patterns; the code inside it follows the [related skills](#limitations).
 
 `X` stands for a feature (`Catalog`) or a screen (`MovieCast` → `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`); a tab's root screen is named for its tab (`DiscoverView`), anything else for what it is ([inside a feature](references/modules.md#inside-a-feature)). A *screen* is one navigable page; its feature exports the view.
 
 An app built another way keeps its structure and conventions until the user asks to change them, taking a shape from this skill only where it has none ([moving an app into packages](references/modules.md#moving-an-app-into-packages)).
+
+## Prerequisites
+
+- Xcode with Swift 6.4 or later, whose SDK has the APIs the shapes use ([the template](references/modules.md#packageswift-template)).
+- An iOS Simulator runtime, for `xcodebuild`.
+- Apple's swift-openapi-generator, when the API has an OpenAPI document ([networking.md](references/networking.md)).
+
+## Examples
 
 The examples are one movie browser on the TMDB API:
 
@@ -86,7 +101,7 @@ Hard rules:
 - **Navigation.** Views push their feature's `XDestination` cases with `NavigationLink(value:)`, or `SharedDestination` for places several features open, and take from the app only the screens they present, which are cases too.
 - **Concurrency.** Swift 6 mode: services are `Sendable`, a struct live service's methods `@concurrent`, stateful services and mocks actors.
 
-## Gotchas
+## Common Issues
 
 - Register destinations only at stack roots, every type through `navigationDestinations()`: in a feature screen a registration runs again when that screen appears twice in a stack, and SwiftUI reports a duplicate.
 - `XScreen` builds a view model on every `body` pass and `XView` keeps the first, so its `init` only assigns.
@@ -108,7 +123,7 @@ Hard rules:
 | [navigation.md](references/navigation.md) | Destinations, linking features, deep links, push or present, sheets, alerts |
 | [conventions.md](references/conventions.md) | Naming a type, file or folder |
 
-## Workflows
+## Instructions
 
 Copy the task's checklist into the response and check items off as they're done.
 
@@ -165,9 +180,9 @@ Copy the task's checklist into the response and check items off as they're done.
 3. Only looks alike → duplicate it.
 4. Visual and domain-free → DesignSystem; talks to the API → Networking; wires features together → the app.
 
-## Related skills
+## Limitations
 
-Load these, when installed, for the code inside the shapes:
+The code inside the shapes is these skills' subject; load them when installed:
 - SwiftUI (`swiftui-specialist`, `swiftui-expert-skill`, `swiftui-pro`): view bodies, modifiers, layout, data flow, performance, navigation and presentation APIs, previews
 - Swift Concurrency (`swift-concurrency`, `swift-concurrency-pro`): load bodies in services, clients and view models, stale-result guards, task groups, cancellation, actors, `Sendable`
 - Swift Testing (`swift-testing-expert`): suites, `#expect`, traits, parameterized and async tests

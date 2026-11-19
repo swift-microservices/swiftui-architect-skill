@@ -95,7 +95,7 @@ final class Router {
 }
 ```
 
-`ContentView` owns it as `@State` and puts it in the environment, so each window keeps its own tab and stacks while every window shares the app's services ([ContentView](composition.md#contentview)). Each tab XScreen binds its stack to its own entry (`NavigationStack(path: $router[.discover])`), so a new tab adds a `TabDestination` case and nothing else to `Router`. `TabDestination` is named like every other place the app can go, which leaves SwiftUI's `Tab` free for `ContentView`.
+`ContentView` owns it as `@State` and puts it in the environment, so each window keeps its own tab and stacks while every window shares the app's services (`composition.md#contentview`). Each tab XScreen binds its stack to its own entry (`NavigationStack(path: $router[.discover])`), so a new tab adds a `TabDestination` case and nothing else to `Router`. `TabDestination` is named like every other place the app can go, which leaves SwiftUI's `Tab` free for `ContentView`.
 
 ## Destination and DestinationView (app)
 
@@ -164,7 +164,7 @@ A feature can link to a place before its screen is built: `DestinationView` show
 
 ## Registering destinations
 
-One modifier in the app's `Navigation/View+NavigationDestinations.swift` registers every destination type, and every stack root applies it: each tab XScreen ([tab XScreen](composition.md#xscreen-tab-and-pushed)) and each presented screen's stack ([presenting a screen](#presenting-a-screen)).
+One modifier in the app's `Navigation/View+NavigationDestinations.swift` registers every destination type, and every stack root applies it: each tab XScreen (`composition.md#xscreen-tab-and-pushed`) and each presented screen's stack ([presenting a screen](#presenting-a-screen)).
 
 ```swift
 extension View {
@@ -261,7 +261,7 @@ WatchlistView(viewModel: WatchlistViewModel(service: watchlistService)) { destin
 - An action on the view model opens it (`openSignIn()`). The presented screen closes itself with `dismiss()`, from its close button or once its view model says it's done, which sets `presentedDestination` back to `nil`.
 - The feature picks `sheet(item:)` or `fullScreenCover(item:)` for its `presentedDestination`; the app picks only the screen. Several places a screen presents share that one property and its style, so only one is up at a time. The same case can be pushed from one view and presented from another.
 - Only `XView` takes the closure, and only when the feature presents a place; the views below it still push values.
-- The presented screen's XScreen is shaped like a pushed one ([XScreen](composition.md#xscreen-tab-and-pushed)). The app wraps it in a `NavigationStack` when it needs a title, a close button or pushes of its own. That stack is a stack root, so it applies `navigationDestinations()` ([registering destinations](#registering-destinations)).
+- The presented screen's XScreen is shaped like a pushed one (`composition.md#xscreen-tab-and-pushed`). The app wraps it in a `NavigationStack` when it needs a title, a close button or pushes of its own. That stack is a stack root, so it applies `navigationDestinations()` ([registering destinations](#registering-destinations)).
 - The feature's previews pass a placeholder or its preview destination view ([previews](#previews)).
 
 ## Sheets, covers and alerts
