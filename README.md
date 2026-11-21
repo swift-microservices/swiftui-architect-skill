@@ -76,7 +76,7 @@ The shapes use Swift 6 language mode and the SDK in Xcode 27 or later (Swift too
 | Area | Covers |
 |---|---|
 | Modules | What a feature is and where its boundary goes, `Package.swift`, the shared package and DesignSystem, strings and assets, building and testing, boundary checks, moving an app into packages |
-| Domain | Models, errors, service protocols, live services, mocks, and ports between features |
+| Domain | Models, errors, service protocols, live services, mocks, ports between features, and data stored on the device |
 | Networking | The API package, its generated client, and how its errors reach a screen |
 | View models | Loading, several resources, paging, keyed loads, filtering and search, nested models, tests |
 | Views | The views a screen is made of, its error and empty states, paging footers, previews |
@@ -84,7 +84,7 @@ The shapes use Swift 6 language mode and the SDK in Xcode 27 or later (Swift too
 | Navigation | Destinations, the router, links between features, deep links, sheets, covers and alerts |
 | Naming | Packages, targets, types, files and folders |
 
-It builds on SwiftUI, Observation, Swift Package Manager and, for an API with an OpenAPI document, [Swift OpenAPI Generator](https://github.com/apple/swift-openapi-generator).
+It builds on SwiftUI, Observation, SwiftData, Swift Package Manager and, for an API with an OpenAPI document, [Swift OpenAPI Generator](https://github.com/apple/swift-openapi-generator).
 
 Not covered: visual design, accessibility, and the code inside each shape, which the skills below handle.
 
@@ -95,6 +95,7 @@ The skill decides the shapes; these skills cover the code inside them. The agent
 - [SwiftUI Pro](https://github.com/twostraws/SwiftUI-Agent-Skill): view bodies, modifiers, layout, data flow, localization, performance
 - [Swift Concurrency Pro](https://github.com/twostraws/Swift-Concurrency-Agent-Skill): loads, cancellation, actors, `Sendable` and strict-concurrency diagnostics
 - [Swift Testing Pro](https://github.com/twostraws/Swift-Testing-Agent-Skill): view model and mapping tests
+- [SwiftData Pro](https://github.com/twostraws/SwiftData-Agent-Skill): models, predicates and fetches for data kept on the device
 
 ## Repository layout
 
@@ -105,15 +106,17 @@ The skill decides the shapes; these skills cover the code inside them. The agent
 skills/swiftui-architect/
 ├── SKILL.md                 what every task needs: the shape, rules, common issues, workflows
 ├── agents/openai.yaml       the skill's name in Codex
-└── references/              read when a task reaches their topic
-    ├── modules.md           features and their boundaries, packages, the shared package, tests, reviews
-    ├── domain.md            models, errors, services, mocks, ports between features
-    ├── networking.md        the API package, its client and errors
-    ├── view-models.md       loading, paging, keyed loads, search, nested models
-    ├── views.md             the views a screen is made of, and its states
-    ├── composition.md       the app target: services, environment keys, screens
-    ├── navigation.md        destinations, the router, linking features, sheets and alerts
-    └── conventions.md       names and folders
+├── references/              read when a task reaches their topic
+│   ├── modules.md           features and their boundaries, packages, the shared package, tests, reviews
+│   ├── domain.md            models, errors, services, mocks, ports between features, stored data
+│   ├── networking.md        the API package, its client and errors
+│   ├── view-models.md       loading, paging, keyed loads, search, nested models
+│   ├── views.md             the views a screen is made of, and its states
+│   ├── composition.md       the app target: services, environment keys, screens
+│   ├── navigation.md        destinations, the router, linking features, sheets and alerts
+│   └── conventions.md       names and folders
+└── scripts/                 run, not read
+    └── check_boundaries.sh  the boundary checks a review runs from the app's root
 .github/                     validation, the semver label check, releases
 CLAUDE.md                    authoring rules for changing the skill
 ```

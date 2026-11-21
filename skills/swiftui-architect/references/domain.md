@@ -1,6 +1,6 @@
 # Domain models and services
 
-XCore holds a feature's domain: the models its screens show, the errors they can fail with, and a service protocol per screen. XLive implements those protocols over the API and maps everything it receives into the domain, so XCore and XUI never know the API exists.
+XCore holds a feature's domain: the models its screens show, the errors they can fail with, and a service protocol per screen. XLive implements those protocols over the API or the device's store and maps everything it receives into the domain, so XCore and XUI never know either exists.
 
 ## Contents
 - Domain models
@@ -8,6 +8,7 @@ XCore holds a feature's domain: the models its screens show, the errors they can
 - Service protocols
 - Naming services and their methods
 - Live services
+- Data stored on the device
 - Mocks
 - Cross-feature services: consumer-owned ports
 
@@ -134,6 +135,37 @@ public struct TMDBMovieDetailService: MovieDetailService {
 - The feature's error maps from the client's error in an initializer, such as a 404 to `.notFound`. `CancellationError` passes through untouched (`networking.md#errors-and-cancellation`).
 - A client step that two of a feature's live services share, such as reading extra artwork, is an internal extension on the client in XLive.
 - A client step that several features share, such as discovering movies by genre for Discover and for Search's filter, is a public extension in SharedLive's `Services/` (`TMDBClient+DiscoverMovies.swift`). It takes Shared values, returns a Shared model, and throws the client's error for each feature to map to its own.
+
+## Data stored on the device
+
+Data the app keeps on the device, such as Search's recent searches, sits behind an XCore service protocol, with a mock, like data from the API, so views and view models never know where it's kept. SwiftData is the store, and its types stay in the Live targets the way generated API types do:
+
+```swift
+// SearchLive/Storage/StoredRecentSearch.swift: what the store keeps, mapped to RecentSearch.
+@Model
+public final class StoredRecentSearch {
+    #Unique<StoredRecentSearch>([\.query])
+
+    var query: String
+    /// When the query last ran, which orders the list; the screen never shows it.
+    var searchedAt: Date
+
+    init(query: String, searchedAt: Date) { … }
+}
+
+// SearchLive/Services/SwiftDataRecentSearchesService.swift
+@ModelActor
+public actor SwiftDataRecentSearchesService: RecentSearchesService {
+    public func recentSearches() async throws -> [RecentSearch] { … }
+
+    public func addRecentSearch(query: String) async throws { … }
+}
+```
+
+- Stored models live in XLive's `Storage/` and map to the domain like responses do (`RecentSearch+SwiftData.swift`). Only a stored model's type is public, so the app can list it in its container. What only the store needs, such as the date that orders the list, stays in the stored model.
+- The live service is a `@ModelActor` actor over the app's container, since a `ModelContext` and its models can't cross actors. It returns domain values, and throws the feature's `unavailable` when the store fails.
+- No `@Query`, `modelContext` or `.modelContainer` in XUI: the view model loads stored data like any resource, and loads it again after changing it through the service.
+- `<AppName>App.init` builds one `ModelContainer` beside the client, for every Live target's stored models (`ModelContainer(for: StoredRecentSearch.self, …)`), and passes it to each live service that keeps data.
 
 ## Mocks
 

@@ -6,7 +6,7 @@ Run from anywhere after every change to the skill, and fix until it passes:
     python3 .github/scripts/check_skill.py
 
 It checks what a script can: the frontmatter, SKILL.md's size and sections, the references
-and their Contents lists, the related skills in Prerequisites and README.md, links, pointers and
+and their Contents lists, the scripts and where they're listed, the related skills in Prerequisites and README.md, links, pointers and
 anchors, pinned package-runner commands, the plugin manifests, and the code style of every Swift
 example. It exits non-zero when any check fails. The review that needs judgment is the checklist
 in CLAUDE.md.
@@ -22,6 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SKILL = ROOT / "skills" / "swiftui-architect"
 REFERENCES = SKILL / "references"
+SCRIPTS = SKILL / "scripts"
 
 # Limits from the Agent Skills specification and Claude Code's skill loading.
 MAX_NAME = 64
@@ -33,7 +34,16 @@ CONTENTS_AFTER_LINES = 100
 TRIGGER_WITHIN = 60  # some harnesses list only a description's first 60 characters
 MAX_TAGS = 5
 # The headings SkillEvaluator's quality check looks for that SKILL.md's sections fit.
-SKILL_SECTIONS = ["## Purpose", "## Prerequisites", "## Examples", "## Common Issues", "## References", "## Instructions", "## Limitations"]
+SKILL_SECTIONS = [
+    "## Purpose",
+    "## Prerequisites",
+    "## Examples",
+    "## Common Issues",
+    "## References",
+    "## Available Scripts",
+    "## Instructions",
+    "## Limitations",
+]
 
 failures: list[str] = []
 
@@ -194,6 +204,27 @@ def check_references(skill_text: str, readme_text: str) -> None:
         items = [line[2:].strip() for line in listed.group(1).splitlines()] if listed else []
         if items != sections:
             fail(f"{link}: its Contents list must match its ## headings, in order")
+
+
+# MARK: - Scripts
+
+
+def check_scripts(skill_text: str, readme_text: str) -> None:
+    """Checks that SKILL.md's Available Scripts table and README.md's layout list every script, and
+    that every script the skill names exists."""
+    table = section(skill_text, "Available Scripts")
+    for path in sorted(SCRIPTS.glob("[!.]*")):
+        name = f"scripts/{path.name}"
+        if f"| `{name}` |" not in table:
+            fail(f"{name}: not listed in SKILL.md's Available Scripts table")
+        if path.name not in readme_text:
+            fail(f"{name}: not named in README.md's layout")
+
+    for path in sorted(SKILL.rglob("*.md")):
+        for number, line in enumerate(read(path).splitlines(), 1):
+            for name in re.findall(r"\bscripts/[\w.-]*\w", line):
+                if not (SKILL / name).is_file():
+                    fail(f"{relative(path)}:{number}: no script at {name}")
 
 
 # MARK: - Related skills
@@ -385,6 +416,7 @@ def main() -> int:
     description = check_frontmatter(skill_text)
     check_skill_size(skill_text)
     check_references(skill_text, readme_text)
+    check_scripts(skill_text, readme_text)
     check_related_skills(skill_text, readme_text)
     check_pinned_commands()
     check_links()

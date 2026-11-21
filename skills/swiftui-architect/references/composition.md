@@ -13,7 +13,7 @@ The app target is the composition root. It is the only module that imports every
 
 ```
 MoviesApp/
-├── MoviesApp.swift                 @main: client, services, Scene
+├── MoviesApp.swift                 @main: client, model container, services, Scene
 ├── App/ContentView.swift           the window's Router and its TabView
 ├── Adapters/                       consumer-owned ports implemented over other features
 ├── Extensions/Environment/         one @Entry key per service protocol
@@ -25,7 +25,7 @@ The app target may use MainActor default isolation, since it only composes Swift
 
 ## `<AppName>App.swift`
 
-Build the client and every service and adapter in `init()`, store them as `let` properties typed as the feature protocols, and inject them on the `Scene`, so every window and screen sees the same instances. No DI container and no singletons.
+Build the client, the model container (`domain.md#data-stored-on-the-device`) and every service and adapter in `init()`, store them as `let` properties typed as the feature protocols, and inject them on the `Scene`, so every window and screen sees the same instances. No DI container and no singletons.
 
 ```swift
 @main
