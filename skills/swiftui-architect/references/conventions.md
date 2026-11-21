@@ -20,7 +20,7 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | A name an imported module declares | a qualifier from the domain | `MovieCollection`, not `Collection` |
 | Feature error | `XError`; one per screen when their failures differ | `CatalogError.notFound`, `GenreDetailError` |
 | Service protocol (XCore) | `XService`, one per screen; another for each concern with a source of its own; never a `…Repository`, `…UseCase` or `…Manager` | `DiscoverService`, `MovieCastService`, `RecentSearchesService` |
-| Service implementation (XLive) | its source + the protocol's name | `TMDBDiscoverService`, `TMDBWatchlistService` |
+| Service implementation (XLive) | its source + the protocol's name | `TMDBDiscoverService`, `SwiftDataRecentSearchesService` |
 | Mock (XCore) | `Mock` + the protocol's name, exposed as `.mock`, and `.mock(_:)` for a scenario | `MockDiscoverService`, `.mock(.failure(.offline))` |
 | Consumer-owned port, and its app adapter | named for the consumer's need; an adapter is the protocol's name with `Adapter` for `Service` | `WatchlistMembershipService`, `WatchlistMembershipAdapter` |
 | Service reads and changes | noun phrases for what reads return; imperative verbs for changes | `movie(id:)`, `shelves(page:)`; `addToWatchlist(_:)` |
@@ -44,7 +44,8 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | App screen | `XScreen` | `MovieDetailScreen` |
 | App entry point | `<AppName>App` | `MoviesApp` |
 | Environment key | `xService` in `EnvironmentValues+XService.swift` | `\.discoverService` |
-| Mapping file | `Model+Source.swift` | `Movie+TMDB.swift`, `CatalogError+TMDB.swift` |
+| Stored model (XLive) | `Stored` + the domain model it maps to | `StoredRecentSearch` |
+| Mapping file | `Model+Source.swift` | `Movie+TMDB.swift`, `RecentSearch+SwiftData.swift` |
 | Display mapping | a property returning `LocalizedStringResource`, in `Model+Title.swift` | `Department.title` |
 | Test fixture | `make…` | `makeMovie(id:title:)` |
 
@@ -54,7 +55,7 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 |---|---|
 | XCore | `Models/`; `Services/`, with a folder per service protocol holding it and its mock (`Services/MovieDetailService/`) |
 | XUI | a folder per screen: its view model and nested models, views, toolbar, paging footers and display mappings, with a subfolder per mode or set of sections (`GenreDetail/Search/`, `MovieDetail/Sections/`); `Components/`: the views and display mappings several screens use, filed by kind (`Cards/`, `Rails/`); `Navigation/`; `Resources/` |
-| XLive | `Mapping/`, `Services/` |
+| XLive | `Mapping/`, `Services/`, `Storage/` for stored models |
 | XTests | `ViewModels/`, `Live/`, `Fixtures.swift` |
 | Shared | `Domain/`; SharedUI: `Components/`, `Navigation/`, `Resources/`; SharedLive: `Mapping/`, and `Services/` for client steps several features share |
 | Networking | `openapi.yaml`, `openapi-generator-config.yaml`, the client, its error, `Middleware/` |

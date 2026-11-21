@@ -52,12 +52,12 @@ Each feature is one package with four targets:
 |---|---|---|
 | `XCore` | Domain models, `XError`, a service protocol and mock per screen, ports | `Shared` |
 | `XUI` | View models, views, `XDestination`, `Localizable.xcstrings`, display mappings | `XCore`, `Shared`, `SharedUI`, `DesignSystem` |
-| `XLive` | Live services, mapping API responses and errors to the domain | `XCore`, `Shared`, `SharedLive`, `Networking` |
+| `XLive` | Live services over the API or the device's store, mapping what they return and their errors to the domain | `XCore`, `Shared`, `SharedLive`, `Networking` |
 | `XTests` | View model and mapping tests (Swift Testing) | `XCore`, `XUI`, `XLive`, `Shared`, `SharedUI`, and `Networking` for response fixtures |
 
 - XCore has no SwiftUI and no infrastructure, so the domain stays testable and usable by any UI.
 - XUI depends on XCore's protocols, never on XLive, so it builds, previews and tests on mocks alone.
-- XLive is the only feature target that sees the API.
+- XLive is the only feature target that sees the API or the store.
 - The app links all three library targets: it builds live services from XLive and shows views from XUI (`composition.md`).
 
 ## Inside a feature
@@ -225,7 +225,7 @@ public struct Page<Item: Sendable>: Sendable {
 **The promotion rule.** A type moves into Shared or SharedUI, and a mapping or client step into SharedLive, only when a second feature needs the same concept and both copies must change together. It holds both ways: what only one feature uses belongs in that feature, however many of its screens use it. Two types that merely look alike are duplicated; they will diverge.
 
 Never in the shared package:
-- Errors, service protocols, ports or live services; each feature maps the client's errors to its own
+- Errors, service protocols, ports, live services or stored models; each feature maps the client's errors to its own
 - Navigation types other than `SharedDestination`
 - Environment keys, app state or preferences
 - Generated API types outside SharedLive
@@ -267,6 +267,7 @@ Each feature package builds, previews and tests without the app. Test what a bug
 |---|---|
 | A screen's own rules: what it loads, its failure rule, paging, stale results (`view-models.md#testing-view-models`) | `XTests/ViewModels`, with private actor stubs |
 | Mapping: dropped incomplete items, paging metadata | `XTests/Live` and `SharedLiveTests`, with hand-built generated types |
+| A live service's own rules over the store, such as newest first and no repeats | `XTests/Live` |
 | Requests, decoding, error classification and cancellation | `NetworkingTests`, with a stub transport |
 | `Destination` mappings that aren't one-to-one, and adapters | app tests |
 | Visual states: loading, empty, error | previews |
@@ -283,22 +284,12 @@ xcodebuild test -scheme Catalog-Package -destination 'platform=iOS Simulator,nam
 
 ## Checking the boundaries
 
-The compiler enforces what each package declares, but not system frameworks, the app target or the roles types play. These checks cover the rest. Run them from the repository root; each finds nothing unless noted:
-
-- Features depend only on the shared package, DesignSystem and Networking: `grep -Hn '\.package(' Packages/*/Package.swift | grep -vE '^Packages/(DesignSystem|Networking)/|"\.\./(Shared|DesignSystem|Networking)"'` finds only other infrastructure packages, such as analytics.
-- XCore and Shared import no UI framework and no Networking: `grep -rlE 'import (SwiftUI|UIKit|Networking)\b' Packages/*/Sources/*Core Packages/Shared/Sources/Shared`
-- XUI and SharedUI import no Networking and no Live target, which compiles once their target declares it: `grep -rlE 'import (Networking|[A-Za-z]+Live)\b' Packages/*/Sources/*UI`
-- Generated API types stay in the Live targets, Networking and tests: `grep -rl --exclude-dir=.build 'Components\.Schemas' --include='*.swift' . | grep -vE '/Sources/([A-Za-z]*Live|Networking)/|/Tests/'`
-- Only the app's screens read services: `grep -rnE '@Environment\(\\\.[A-Za-z]+Service\)' Packages/*/Sources`
-- Destinations register only at stack roots: `grep -rn 'navigationDestination' Packages/*/Sources` finds only previews.
-- No type plays a role the architecture leaves out: `grep -rnE --include='*.swift' --exclude-dir=.build '(class|struct|enum|actor|protocol) [A-Za-z]+(Repository|UseCase|Interactor|Manager|Coordinator)\b' .`
-- No package defaults to the main actor: `grep -Hn 'defaultIsolation' Packages/*/Package.swift`
-- Views use generated string and asset symbols: `grep -rnE '(Text|Button|Label|Toggle|Image|navigationTitle)\("' Packages/*/Sources`
+The compiler enforces what each package declares, but not system frameworks, the app target or the roles types play. This skill's `scripts/check_boundaries.sh` checks the rest. Run it from the app's repository root, with no arguments; it prints each failure under the rule it breaks and exits non-zero on any. Under REVIEW it lists each package dependency besides the shared package, DesignSystem and Networking, which must be infrastructure, such as analytics.
 
 A review copies this checklist into the response:
 
 ```
-- [ ] Run the checks above
+- [ ] Run scripts/check_boundaries.sh from the repository root, and confirm each REVIEW line is infrastructure
 - [ ] Each feature passes the boundary tests (references/modules.md#defining-features) and owns all its screens; the shared package holds nothing only one feature uses
 - [ ] Each screen: one view model, built by its XScreen, over its own service protocol and ports
 - [ ] Report each finding with its file, the rule it breaks and the fix; change code only when the user asks
