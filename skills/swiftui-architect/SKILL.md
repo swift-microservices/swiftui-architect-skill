@@ -13,7 +13,7 @@ metadata:
 
 Decides where code lives in a modular SwiftUI app, who owns it, and the shape of the pieces that hold it together: modules and their dependency direction, domain models and errors, services, view models, views, app composition, navigation and naming.
 
-A shape this skill states, such as a view model's state or `XView`'s `.task`, overrides other skills' patterns; the code inside it follows the [related skills](#limitations).
+A shape this skill states, such as a view model's state or `XView`'s `.task`, overrides other skills' patterns; the code inside it follows the [related skills](#related-skills).
 
 `X` stands for a feature (`Catalog`) or a screen (`MovieCast` → `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`); a tab's root screen is named for its tab (`DiscoverView`), anything else for what it is ([inside a feature](references/modules.md#inside-a-feature)). A *screen* is one navigable page; its feature exports the view.
 
@@ -22,8 +22,9 @@ An app built another way keeps its structure and conventions until the user asks
 ## Prerequisites
 
 - Xcode with Swift 6.4 or later, whose SDK has the APIs the shapes use ([the template](references/modules.md#packageswift-template)).
-- An iOS Simulator runtime, for `xcodebuild`.
+- An iOS Simulator runtime for `xcodebuild`: `swift build` and `swift test` build for the Mac, where an iOS-only package fails ([testing](references/modules.md#testing)).
 - Apple's swift-openapi-generator, when the API has an OpenAPI document ([networking.md](references/networking.md)).
+- The [related skills](#related-skills) `swiftui-pro`, `swift-concurrency-pro` and `swift-testing-pro`; ask the user once to install a missing one (`npx skills@1.9.0 add <source> --skill <name>`) and carry on.
 
 ## Examples
 
@@ -97,7 +98,7 @@ Hard rules:
 - **Models speak the app's language.** Domain models are `Equatable`, `Sendable` values shaped for what a screen shows, unable to hold an illogical value (`Movie`; `MovieSummary` in a list). A feature's error enum is cased by what its screens show (`offline`, `notFound`, `unavailable`); an empty answer is never an error.
 - **Services do the work.** One protocol per screen in XCore returns view-ready domain values (`Page<Item>` when paged) and throws the feature's error; XLive implements it. No repository, use case or manager sits between a service and its view model.
 - **View models hold state.** `@MainActor @Observable public final class XViewModel` per screen, taking IDs and services and assigning what they return. Each resource has its data, `isLoading…` and `…Error`; a paged one adds `next…Page`, `isLoadingNext…Page` and `next…PageError`. A part only some views read, with its own input or loading, is a nested `@Observable` model, never a `…ViewModel`.
-- **Views stay plain**: no routers, navigation closures or service lookups. `XView` owns the view model as its only `@State`, puts it in the environment and starts the loads. `XPhaseView` shows the content whenever there is data, else the error, progress or empty state. `XContentView` lays out the values it's given.
+- **Views stay plain**: no routers, navigation closures or service lookups. `XView` owns the view model as its only `@State`, puts it in the environment and starts the loads. `XPhaseView` picks what the loads' state shows, and `XContentView` lays out the values it's given.
 - **Navigation.** Views push their feature's `XDestination` cases with `NavigationLink(value:)`, or `SharedDestination` for places several features open, and take from the app only the screens they present, which are cases too.
 - **Concurrency.** Swift 6 mode: services are `Sendable`, a struct live service's methods `@concurrent`, stateful services and mocks actors.
 
@@ -108,7 +109,6 @@ Hard rules:
 - A string literal in a package looks in the app's bundle; use the catalog's generated symbols.
 - Never set `.defaultIsolation(MainActor.self)` in a package: generated OpenAPI code doesn't build under it, and domain types must stay nonisolated.
 - A type named like an SDK type (`Collection`, `Section`) is ambiguous where both are imported; qualify it (`MovieCollection`).
-- `swift build` and `swift test` build for the Mac, where an iOS-only package fails; test its scheme on an iOS Simulator with `xcodebuild` ([testing](references/modules.md#testing)).
 
 ## References
 
@@ -182,7 +182,11 @@ Copy the task's checklist into the response and check items off as they're done.
 
 ## Limitations
 
-The code inside the shapes is these skills' subject; load them when installed:
-- SwiftUI (`swiftui-specialist`, `swiftui-expert-skill`, `swiftui-pro`): view bodies, modifiers, layout, data flow, performance, navigation and presentation APIs, previews
-- Swift Concurrency (`swift-concurrency`, `swift-concurrency-pro`): load bodies in services, clients and view models, stale-result guards, task groups, cancellation, actors, `Sendable`
-- Swift Testing (`swift-testing-expert`): suites, `#expect`, traits, parameterized and async tests
+- Not covered: visual design, accessibility, how a live service stores data on the device, and targets beyond the app, such as widgets and extensions; ask the user rather than invent a shape.
+
+## Related skills
+
+They cover the code inside the shapes; this skill's shapes and rules win over their examples. Load each when its task comes up:
+- View bodies, modifiers, layout, data flow, navigation and presentation APIs, localization, previews, performance: `swiftui-pro` ([source](https://github.com/twostraws/SwiftUI-Agent-Skill))
+- Load bodies, stale-result guards, task groups, cancellation, actors, `Sendable` and strict-concurrency diagnostics: `swift-concurrency-pro` ([source](https://github.com/twostraws/Swift-Concurrency-Agent-Skill))
+- Test code: Swift Testing suites, `#expect`, traits, parameterized and async tests: `swift-testing-pro` ([source](https://github.com/twostraws/Swift-Testing-Agent-Skill))

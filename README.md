@@ -48,7 +48,7 @@ codex plugin add swiftui-architect@swiftui-architect-skill
 **skills CLI**
 
 ```bash
-npx skills add https://github.com/swift-microservices/swiftui-architect-skill --skill swiftui-architect
+npx skills@1.9.0 add https://github.com/swift-microservices/swiftui-architect-skill --skill swiftui-architect
 ```
 
 **Manually**
@@ -90,11 +90,11 @@ Not covered: visual design, accessibility, and the code inside each shape, which
 
 ### Works well with
 
-The skill decides the shapes; these skills cover the code inside them:
+The skill decides the shapes; these skills cover the code inside them. The agent loads each when its task comes up, such as the testing skill before writing tests, and asks you to install one that's missing:
 
-- **SwiftUI:** Apple's `swiftui-specialist` in Xcode's coding assistant, [SwiftUI Expert](https://github.com/AvdLee/SwiftUI-Agent-Skill) or [SwiftUI Pro](https://github.com/twostraws/swiftui-agent-skill): view bodies, layout, performance
-- **Swift Concurrency:** [Swift Concurrency](https://github.com/AvdLee/Swift-Concurrency-Agent-Skill) or [Swift Concurrency Pro](https://github.com/twostraws/Swift-Concurrency-Agent-Skill): actors, task groups, `Sendable` diagnostics
-- **Swift Testing:** [Swift Testing Expert](https://github.com/AvdLee/Swift-Testing-Agent-Skill): view model and mapping tests
+- [SwiftUI Pro](https://github.com/twostraws/SwiftUI-Agent-Skill): view bodies, modifiers, layout, data flow, localization, performance
+- [Swift Concurrency Pro](https://github.com/twostraws/Swift-Concurrency-Agent-Skill): loads, cancellation, actors, `Sendable` and strict-concurrency diagnostics
+- [Swift Testing Pro](https://github.com/twostraws/Swift-Testing-Agent-Skill): view model and mapping tests
 
 ## Repository layout
 

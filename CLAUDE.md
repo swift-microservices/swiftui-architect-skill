@@ -7,16 +7,16 @@ Every change reaches `main` through a pull request and ends with [the checks](#a
 ## What the skill is for
 
 - It decides where code lives, who owns it, and the shape of the pieces that hold a modular SwiftUI app together: modules and their dependency direction, domain models and errors, services and the networking client, view models, the views a screen is made of, app composition, navigation and naming.
-- It states shapes and rules. How to write the code inside a shape (view bodies, modifiers, layout, redraw performance, isolation, task groups, how a load guards against stale results) belongs to the SwiftUI, Swift Concurrency and Swift Testing skills listed under Limitations in `SKILL.md`.
+- It states shapes and rules. How to write the code inside a shape (view bodies, modifiers and the view each attaches to, layout, API availability, redraw performance, isolation, task groups, how a load guards against stale results, test code) belongs to `swiftui-pro`, `swift-concurrency-pro` and `swift-testing-pro`, listed under Related skills in `SKILL.md`.
 - Out of scope: visual design, accessibility, and anything that belongs to one app built with the skill.
 
 ## Skill best practices
 
-These come from Anthropic's [skill authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices), [skills in Claude Code](https://code.claude.com/docs/en/skills), [what survives compaction](https://code.claude.com/docs/en/context-window), the [Agent Skills overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) and the [Agent Skills specification](https://agentskills.io/specification), as this skill applies them, with Claude Code's [plugins](https://code.claude.com/docs/en/plugins), [plugin manifest reference](https://code.claude.com/docs/en/plugins/manifest-reference) and [plugin loading reference](https://code.claude.com/docs/en/plugins/loading) for how it ships, and [Codex's skills](https://learn.chatgpt.com/docs/build-skills) and [plugins](https://developers.openai.com/codex/plugins/build) for what Codex reads. The guidance changes, so recheck the sources before changing the skill's structure or frontmatter.
+These come from Anthropic's [skill authoring best practices](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices), [skills in Claude Code](https://code.claude.com/docs/en/skills), [what survives compaction](https://code.claude.com/docs/en/context-window), the [Agent Skills overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) and the [Agent Skills specification](https://agentskills.io/specification) and its [authoring guides](https://agentskills.io/skill-creation/best-practices), as this skill applies them, with Claude Code's [plugins](https://code.claude.com/docs/en/plugins), [plugin manifest reference](https://code.claude.com/docs/en/plugins/manifest-reference) and [plugin loading reference](https://code.claude.com/docs/en/plugins/loading) for how it ships, [Codex's skills](https://learn.chatgpt.com/docs/build-skills) and [plugins](https://developers.openai.com/codex/plugins/build) for what Codex reads, and NVIDIA's [SkillEvaluator](https://docs.nvidia.com/skills/skillevaluator/) for the Tier 1 and Tier 2 checks a skill passes before it's published. The guidance changes, so recheck the sources before changing the skill's structure or frontmatter.
 
 **How Claude loads a skill**, in three stages, each with its own limit:
 
-1. **The listing.** Every session lists each installed skill's `name` and `description` on every turn, and Claude decides from them alone whether to invoke the skill. Claude Code cuts an entry at 1,536 characters, and when the listing outgrows its budget, 1% of the context window, it drops the descriptions of the skills invoked least, which keep only their names.
+1. **The listing.** Every session lists each installed skill's `name` and `description` on every turn, and Claude decides from them alone whether to invoke the skill. Claude Code cuts an entry at 1,536 characters, and when the listing outgrows its budget, 1% of the context window, it drops the descriptions of the skills invoked least, which keep only their names. Codex fits its listing in 2% of the context window, or 8,000 characters when the window is unknown, by shortening descriptions first, so a description's opening carries its triggers.
 2. **Invocation.** The `SKILL.md` body enters the conversation as one message and stays on every later turn, so each line is a recurring cost; Claude Code doesn't re-read it, so its guidance reads as standing instructions. The specification recommends under 500 lines and 5,000 tokens. After compaction Claude Code re-attaches the first 5,000 tokens of each invoked skill, within 25,000 tokens shared by every skill invoked, the most recent first.
 3. **References.** A file in `references/` loads only when `SKILL.md` sends Claude to it. Claude may preview a file reached only through another reference, such as its first 100 lines.
 
@@ -31,10 +31,11 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
 **Structure**
 
 - The skill folder holds only what agents read: `SKILL.md`, `references/` and `agents/openai.yaml`, Codex's display name for the skill. Everything for people, such as `README.md`, this file, `.github/` and the license, stays outside it.
-- `SKILL.md` is the entry point and holds only what every task needs, the most important first, since compaction keeps the start. It stays under 500 lines and 5,000 tokens, with its References table inside the first 5,000, and a change that adds to it cuts as much elsewhere. Its sections are: purpose, prerequisites (the toolchain and tools the shapes need), examples (the example app), the shape, dependency direction, who owns what, principles, the shapes in brief, common issues, references, instructions (the workflows) and limitations (the related skills). A section that fits a heading SkillEvaluator's quality check looks for takes that heading.
+- `SKILL.md` is the entry point and holds only what every task needs, the most important first, since compaction keeps the start. It stays under 500 lines and 5,000 tokens, with its References table inside the first 5,000, and a change that adds to it cuts as much elsewhere. Its sections are: purpose, prerequisites (the toolchain and tools the shapes need), examples (the example app), the shape, dependency direction, who owns what, principles, the shapes in brief, common issues, references, instructions (the workflows), limitations (what the skill leaves out) and related skills. A section that fits a heading SkillEvaluator's quality check looks for takes that heading.
 - Its common issues are mistakes any task can make, in modules, naming, composition or navigation, each one an agent actually makes. A mistake only one shape invites, such as in paging or a keyed load, is stated once, in that shape's reference.
 - A workflow is a checklist the agent copies into its response, ending in a build or test it repeats until it passes. A checklist for a task an app needs once, such as moving it into packages or a review, lives in the reference it follows, with a one-line pointer under Instructions in `SKILL.md`.
 - Detail lives in `references/`, one topic per file. Every reference is in `SKILL.md`'s References table, saying when to read it, so none is reachable only through another: references stay one level deep. A reference never links to another; it points to one in plain text, as a code span such as `view-models.md#keyed-resources`, which keeps it one level deep for SkillEvaluator too.
+- A one-off command the skill gives an agent pins a released version, such as `npx skills@1.9.0 add`, as the specification's [guide to scripts](https://agentskills.io/skill-creation/using-scripts) asks; SkillSpector reports an unpinned one as a rug-pull risk.
 - A reference over 100 lines starts with a `## Contents` list of its `##` sections.
 - Links are relative, with forward slashes and GitHub heading anchors; renaming a heading means updating every link and pointer to it.
 - `README.md` is for people deciding whether to use the skill: what it does, the architecture at a glance, how to install and use it, and what it leaves to other skills. It stays short, restates no rule and shows no shape.
@@ -46,6 +47,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
 - One home per rule. A rule lives in one reference; `SKILL.md` carries at most one line for it (a principle, a brief, a common issue or a workflow step); other references point to it instead of restating it, and `conventions.md` holds only the names it uses. A rule stated twice drifts apart and costs tokens twice.
 - One home per example, too: code shown in one reference is linked from the others, not repeated.
 - Concrete examples, and one default rather than a menu of options.
+- Related skills lists each skill that covers the code inside a shape, one line each: what it covers, the `name` in that skill's frontmatter, and a link to its source. Prerequisites names the same skills, so an agent asks the user to install a missing one, and `README.md`'s Works well with links the same sources. They are Paul Hudson's SwiftUI Pro, Swift Concurrency Pro and Swift Testing Pro, one author's skills that agree with each other, chosen for current APIs and a small `SKILL.md`. Where their examples differ from this skill, this skill's shapes and rules win, and the overlap is never restated here.
 
 ## What a change must respect
 
@@ -82,7 +84,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
 
 1. Work on a branch, never on `main`. From `main`, start one from the latest: `git fetch origin && git switch -c <branch> origin/main`.
 2. Decide whether it belongs: architecture, ownership or a shape goes in; technique goes to the related skills; one app's detail stays out.
-3. Find every place the rule or name appears: `grep -rn "<term>" README.md CLAUDE.md .claude-plugin .github skills`.
+3. Find every place the rule or name appears: `grep -rn "<term>" README.md CLAUDE.md .claude-plugin .codex-plugin .agents .github skills`.
 4. Edit the rule's home first, then its line in `SKILL.md`, then `conventions.md`, then `README.md` when what the skill covers changes. Keep the descriptions in `SKILL.md`, `.claude-plugin/plugin.json`, the plugin entry in `.claude-plugin/marketplace.json` and `.codex-plugin/plugin.json` identical.
 5. Run [the checks](#after-every-change).
 
@@ -94,21 +96,30 @@ A new reference file gets a lowercase topic name, a Contents list once it passes
    - the frontmatter's keys, `name`, `description`, `license` and `metadata`'s `author` and `tags`, against the limits above, and that the YAML parses when Ruby is installed
    - `SKILL.md`'s sections, lines and estimated tokens, at 2.9 characters a token, as Claude's tokenizer measures this skill, and that its References table ends inside the first 5,000
    - that every reference is in `SKILL.md`'s References table and `README.md`'s layout, with a Contents list past 100 lines
+   - that Prerequisites names, and `README.md`'s Works well with links, exactly the skills Related skills lists
+   - that every `npx`, `bunx` or `uvx` command in the skill, `README.md` and this file pins a version
    - every relative link and heading anchor in `README.md`, this file and the skill, every pointer in the references and in `SKILL.md`'s checklists, and that no reference links to another
    - that the descriptions and the four versions in `SKILL.md` and the Claude Code and Codex manifests agree, and that the Codex marketplace lists the plugin
    - that every Swift example stays within 100 columns, documents a declaration with each `///`, and uses none of the APIs the SDK or structured concurrency replaced, such as `ObservableObject`, `NavigationView`, `.onAppear` or `DispatchQueue`
    - `claude plugin validate .` when Claude Code is installed; its warnings that `CLAUDE.md` at the plugin root isn't loaded as context and that there's no icon are expected
-2. SkillEvaluator's offline Tier 1 passes, with its reports written outside the repository:
+2. SkillEvaluator's Tier 1 passes. Run it on a clean checkout, such as one from `git worktree add --detach`, since an ignored file such as `.DS_Store` leaves its security scan incomplete, with its reports written outside the repository. With an API key from [build.nvidia.com](https://build.nvidia.com) in `NVIDIA_API_KEY` it adds an LLM rubric and security review; without one, pass `--no-llm`. The rubric moves several points between runs, so a change that alters `SKILL.md` compares two runs of `skillevaluator tier1 rubric-eval` against two on its base:
 
    ```
    uv tool install 'skillevaluator[all]==1.0.1'
-   skillevaluator tier1 skills/swiftui-architect --no-llm \
+   skillevaluator tier1 skills/swiftui-architect \
      --skillspector-baseline .github/skillspector-baseline.yaml -r cli,markdown -o <folder outside the repo>
    ```
 
    Its security scan matches keywords. A reviewed false positive is waived in `.github/skillspector-baseline.yaml`, one rule per phrase per file, each with a `reason`; anything else is fixed. What remains is advisory and has no fix in the skill: Hermes leaves `agents/openai.yaml` out of its file list, where Codex needs it, and Copilot CLI and OpenCode reload skills only on restart.
-3. A new or changed code shape type-checks in a scratch package with the `Package.swift` template's settings, built with `xcodebuild` for an iOS Simulator against the current SDK.
-4. Review the diff for what no script checks:
+3. SkillEvaluator's Tier 2 passes, with no cluster judged `DUPLICATE`: a rule repeated within the skill moves to its one home. It embeds the skill through NVIDIA's API, so it needs the key. To compare the skill with the related skills, check each out, copy each skill's own folder into one directory without symlinks, which the tool refuses, build a catalog from it and pass it with `--catalog`; content the skill shares with one is technique, which stays in the related skill:
+
+   ```
+   export SKILL_EVAL_EMBEDDING_PROVIDER=nv_build NVIDIA_API_KEY=<key>
+   skillevaluator tier2 similarity-check <related skills folder> --type skill --full-body --save-catalog <folder outside the repo>/related-skills.json
+   skillevaluator tier2 skills/swiftui-architect --catalog <folder outside the repo>/related-skills.json --full-body -o <folder outside the repo>
+   ```
+4. A new or changed code shape type-checks in a scratch package with the `Package.swift` template's settings, built with `xcodebuild` for an iOS Simulator against the current SDK.
+5. Review the diff for what no script checks:
 
    ```
    - [ ] Each rule has one home: SKILL.md carries at most one line for it, and other files point to it
@@ -116,9 +127,10 @@ A new reference file gets a lowercase topic name, a Contents list once it passes
    - [ ] Examples are the movie browser's, show a shape rather than an implementation, and read at a glance
    - [ ] Terms are conventions.md's, and grep finds no stale name or rule, no history, and no name from an app the skill is used on
    - [ ] README.md still describes what the skill covers
+   - [ ] Nothing states UI technique the related skills own, such as a modifier's placement or an API's availability
    ```
 
-5. When the change alters what an agent produces, compare it with the branch's base:
+6. When the change alters what an agent produces, compare it with the branch's base:
    - Check the base out as the baseline: `git fetch origin && git worktree add --detach ../swiftui-architect-baseline "$(git merge-base HEAD origin/main)"`.
    - Give two fresh sessions the same two or three realistic tasks (add a feature, add a paged screen, link two features, place a shared type, move an app into packages), one with each skill. Start both from an empty folder, so neither reads this file, and load each skill with `claude --plugin-dir <path>`, which replaces a marketplace install of the plugin for that session. A copy in `~/.claude/skills/`, such as the skills CLI installs, isn't a plugin and still loads, so move it aside for the comparison, and confirm each session lists one swiftui-architect skill.
    - Run them on the models the skill runs on, Haiku, Sonnet and Opus, since a smaller model shows the gaps a larger one fills on its own.

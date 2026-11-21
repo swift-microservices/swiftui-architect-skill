@@ -1,6 +1,6 @@
 # Views
 
-A screen is a small family of views in its feature's XUI target: `XView`, the public entry point, renders `XPhaseView`, which picks what to show from where the screen's loads stand, and `XContentView` lays the content out. Keep them plain, native SwiftUI: a view model in, views out, `NavigationLink(value:)` for navigation. For SwiftUI technique inside these shapes, use a SwiftUI skill ([related skills](../SKILL.md#limitations)).
+A screen is a small family of views in its feature's XUI target: `XView`, the public entry point, renders `XPhaseView`, which picks what to show from where the screen's loads stand, and `XContentView` lays the content out. Keep them plain, native SwiftUI: a view model in, views out, `NavigationLink(value:)` for navigation. SwiftUI technique inside these shapes is `swiftui-pro`'s subject ([related skills](../SKILL.md#related-skills)).
 
 ## Contents
 - File roles
@@ -40,7 +40,6 @@ public struct DiscoverView: View {
 
     public var body: some View {
         DiscoverPhaseView()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle(.discoverTitle)
             .task {
                 await viewModel.load()
@@ -106,8 +105,7 @@ struct DiscoverContentView: View {
 - `XPhaseView` checks in a fixed order: the content whenever there is data, the error only when there's nothing to show, progress while the load runs, then the empty state where the design has one. It follows the resource the content can't do without and passes the others along.
 - A screen that loads nothing, such as a form, has no `XPhaseView`: `XView` renders `XContentView`.
 - A screen with a filter (`view-models.md#filtering-loaded-values`) shows the content while something matches, then `ContentUnavailableView.search` while there's data but nothing matches, ahead of the error and progress.
-- `XContentView` takes values, owns the scroll container and lays out one view per resource or section. What acts inside it, such as the paging footer or a row's swipe action, reads the view model from the environment, and so does `XContentView` itself to bind a presentation only the content opens (`navigation.md#sheets-covers-and-alerts`).
-- A title from loaded data goes with that data. When the content is the thing the title names, the title goes in `XContentView` (`.navigationTitle(movie.title)`). When the thing loads beside the content, the title goes on `XView`, so it stays up in every state (`.navigationTitle(viewModel.genre?.name ?? "")`).
+- `XContentView` takes values, owns the scroll container and lays out one view per resource or section. What acts inside it, such as the paging footer or a row's swipe action, reads the view model from the environment.
 
 ## What a screen shows without content
 
@@ -142,7 +140,7 @@ public var body: some View {
         .task(id: searchSession.query) {
             await searchSession.load()
         }
-        // The frame, .task, .refreshable and .environment(viewModel), as in DiscoverView.
+        // .task, .refreshable and .environment(viewModel), as in DiscoverView.
 }
 
 // GenreDetailPhaseView.swift
