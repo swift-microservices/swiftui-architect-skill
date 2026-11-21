@@ -1,6 +1,6 @@
 # View models
 
-A view model loads what one screen shows and exposes it as state. Services do the work (mapping and aggregation) and return view-ready domain values; the view model assigns them and tracks loading, errors and paging. How to write the loads inside these shapes (tasks, isolation, task groups) is a Swift Concurrency skill's subject ([related skills](../SKILL.md#limitations)).
+A view model loads what one screen shows and exposes it as state. Services do the work (mapping and aggregation) and return view-ready domain values; the view model assigns them and tracks loading, errors and paging. How to write the loads inside these shapes (tasks, isolation, task groups) is `swift-concurrency-pro`'s subject ([related skills](../SKILL.md#related-skills)).
 
 ## Contents
 - The shape
@@ -341,7 +341,7 @@ extension GenreDetailViewModel {
 
 ## Testing view models
 
-Swift Testing, `@MainActor` suites, `@testable import XUI`, and a private actor stub of the service in each test file. Tests that interleave two loads use a stub that holds a request until the test releases it. How to write the tests themselves is a Swift Testing skill's subject ([related skills](../SKILL.md#limitations)).
+Swift Testing, `@MainActor` suites, `@testable import XUI`, and a private actor stub of the service in each test file. Tests that interleave two loads use a stub that holds a request until the test releases it. How to write the tests themselves is `swift-testing-pro`'s subject ([related skills](../SKILL.md#related-skills)).
 
 Test the rules a bug would break on this screen, not the shape every view model shares:
 - What a load asks the service for: the ID, key or page.

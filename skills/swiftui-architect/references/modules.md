@@ -253,8 +253,8 @@ They import no feature. What they need from one, such as the signed-in account's
 Each module owns the strings, images and colors it shows, and reaches them through symbols Xcode generates, so a missing key or asset is a build error, not a blank at runtime.
 
 - **Strings.** Each XUI target has a String Catalog (`Resources/Localizable.xcstrings`) for everything its views show; the app has one for its own chrome. SharedUI's catalog holds only copy every feature must say the same way, such as the shared screen states. A string two features show is duplicated in each catalog.
-- Add the key first (`catalog.movieCast.title`), then use its generated symbol: `Text(.catalogMovieCastTitle)`, `Button(.catalogActionRetry, action: retry)`; a key with a placeholder generates a function. Symbols carry their module's bundle. A string literal in a package would need `bundle: #bundle`, or it silently looks in the app's bundle.
-- A non-view type that carries user-facing text holds a `LocalizedStringResource`, never a `String`. Display mappings are XUI extensions on domain values (`Department.title`); models and view models hold no display strings.
+- A key names its feature and screen (`catalog.movieCast.title`), and views use its generated symbol (`Text(.catalogMovieCastTitle)`), which carries its module's bundle.
+- Display mappings are XUI extensions on domain values (`Department.title`); models and view models hold no display strings.
 - **Images and colors.** A feature's artwork lives in its XUI target, shared icons and colors in DesignSystem, the app icon in the app. Use the generated symbols (`Image(.emptyWatchlist)`), never `Image("name")`.
 - **Custom fonts** ship in DesignSystem, which registers them itself, once, since a package has no Info.plist.
 - The app sets `LOCALIZATION_PREFERS_STRING_CATALOGS`, `STRING_CATALOG_GENERATE_SYMBOLS`, `SWIFT_EMIT_LOC_STRINGS` and `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS`; each package with resources declares `defaultLocalization`.

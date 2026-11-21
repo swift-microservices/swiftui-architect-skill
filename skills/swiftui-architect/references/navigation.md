@@ -286,9 +286,9 @@ func applyFilter() { … }
 ```
 
 - The toolbar's button calls `openFilter()`, `SearchFilterView` binds `$viewModel.filterDraft`, and its apply button calls `applyFilter()`.
-- `XView` presents what any state can open, such as a toolbar's filter, and every screen the app passes in, wherever the action that opens it sits. A view the feature builds that only the content opens, such as the confirmation a watchlist row's swipe action asks for, `XContentView` presents.
+- `XView` presents every screen the app passes in, wherever the action that opens it sits.
 - A presented view that needs a title or a close button owns an unmanaged `NavigationStack`. That stack registers no destinations, so a `NavigationLink(value:)` in it does nothing; when the design pushes from what's presented, it's a screen the app presents ([presenting a screen](#presenting-a-screen)).
-- A presentation about one value, such as the watchlist item a row asks to remove, is that value as an optional (`var itemToRemove: WatchlistItem?`). It shows while the value is set, its actions receive the value, and dismissing it sets the value back to `nil`. No `Bool` sits beside the value, since the two could disagree. It binds through the `item:` forms of `confirmationDialog` and `alert`, which back-deploy, so they need no `#available`.
+- A presentation about one value, such as the watchlist item a row asks to remove, is that value as an optional (`var itemToRemove: WatchlistItem?`). It shows while the value is set, its actions receive the value, and dismissing it sets the value back to `nil`. No `Bool` sits beside the value, since the two could disagree. It binds through the `item:` forms of `confirmationDialog` and `alert`.
 - A screen with several sheets holds one optional `Identifiable` enum of them (`presentedSheet`), never a `Bool` each, so only one is ever up.
 
 ## Previews
