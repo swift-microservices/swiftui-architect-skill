@@ -138,20 +138,12 @@ public struct TMDBMovieDetailService: MovieDetailService {
 
 ## Data stored on the device
 
-Data the app keeps on the device, such as Search's recent searches, sits behind an XCore service protocol, with a mock, like data from the API, so views and view models never know where it's kept. SwiftData is the store, and its types stay in the Live targets the way generated API types do:
+Data the app keeps on the device, such as Search's recent searches, sits behind an XCore service protocol, with a mock, like data from the API, so views and view models never know where it's kept. SwiftData is the store, and its types stay in the Live targets the way generated API types do. How its schema, queries and migrations are written is `swiftdata-pro`'s subject ([related skills](../SKILL.md#related-skills)):
 
 ```swift
 // SearchLive/Storage/StoredRecentSearch.swift: what the store keeps, mapped to RecentSearch.
 @Model
-public final class StoredRecentSearch {
-    #Unique<StoredRecentSearch>([\.query])
-
-    var query: String
-    /// When the query last ran, which orders the list; the screen never shows it.
-    var searchedAt: Date
-
-    init(query: String, searchedAt: Date) { … }
-}
+public final class StoredRecentSearch { … }
 
 // SearchLive/Services/SwiftDataRecentSearchesService.swift
 @ModelActor
@@ -163,7 +155,7 @@ public actor SwiftDataRecentSearchesService: RecentSearchesService {
 ```
 
 - Stored models live in XLive's `Storage/` and map to the domain like responses do (`RecentSearch+SwiftData.swift`). Only a stored model's type is public, so the app can list it in its container. What only the store needs, such as the date that orders the list, stays in the stored model.
-- The live service is a `@ModelActor` actor over the app's container, since a `ModelContext` and its models can't cross actors. It returns domain values, and throws the feature's `unavailable` when the store fails.
+- The live service is a `@ModelActor` actor over the app's container. It returns domain values, and throws the feature's `unavailable` when the store fails.
 - No `@Query`, `modelContext` or `.modelContainer` in XUI: the view model loads stored data like any resource, and loads it again after changing it through the service.
 - `<AppName>App.init` builds one `ModelContainer` beside the client, for every Live target's stored models (`ModelContainer(for: StoredRecentSearch.self, …)`), and passes it to each live service that keeps data.
 

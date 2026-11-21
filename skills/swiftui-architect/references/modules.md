@@ -267,7 +267,7 @@ Each feature package builds, previews and tests without the app. Test what a bug
 |---|---|
 | A screen's own rules: what it loads, its failure rule, paging, stale results (`view-models.md#testing-view-models`) | `XTests/ViewModels`, with private actor stubs |
 | Mapping: dropped incomplete items, paging metadata | `XTests/Live` and `SharedLiveTests`, with hand-built generated types |
-| A live service's own rules over the store, such as newest first and no repeats | `XTests/Live`, on an in-memory `ModelContainer` |
+| A live service's own rules over the store, such as newest first and no repeats | `XTests/Live` |
 | Requests, decoding, error classification and cancellation | `NetworkingTests`, with a stub transport |
 | `Destination` mappings that aren't one-to-one, and adapters | app tests |
 | Visual states: loading, empty, error | previews |
