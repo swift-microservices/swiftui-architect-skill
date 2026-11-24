@@ -68,6 +68,50 @@ package_dependencies() {
     done
 }
 
+# adapter_targets: each adapter target's folder, one per line: a feature's targets besides XCore
+# and XUI, and the shared package's besides Shared and SharedUI. A feature is a package with an
+# XCore target.
+adapter_targets() {
+    for target in Packages/*/Sources/*; do
+        [ -d "$target" ] || continue
+        package=${target%/Sources/*}
+        name=${package#Packages/}
+        case "$name" in
+        Shared)
+            case "${target##*/}" in
+            Shared | SharedUI) continue ;;
+            esac
+            ;;
+        *)
+            [ -d "$package/Sources/${name}Core" ] || continue
+            case "${target##*/}" in
+            "${name}Core" | "${name}UI") continue ;;
+            esac
+            ;;
+        esac
+        echo "$target"
+    done
+}
+
+# alternatives <lines>: the lines joined with |, for an extended regular expression.
+alternatives() {
+    printf '%s\n' "$1" | grep -v '^$' | paste -s -d '|' -
+}
+
+# imports_of_other_adapters <adapter target's folder>: each import in the target of another adapter
+# target. A feature's adapter target may import the shared package's; the shared package's import
+# none.
+imports_of_other_adapters() {
+    case "$1" in
+    Packages/Shared/*) others=$adapter_names ;;
+    *) others=$feature_adapter_names ;;
+    esac
+    others=$(alternatives "$(printf '%s\n' "$others" | grep -vxF -e "${1##*/}")")
+    if [ -n "$others" ]; then
+        swift_grep -HnE "import (${others})${end}" "$1"
+    fi
+}
+
 # imported_modules <folders…>: each module the Swift files under the folders import, one per line.
 imported_modules() {
     swift_grep -hE "^[[:space:]]*(@[A-Za-z]+[[:space:]]+)*([a-z]+[[:space:]]+)?import[[:space:]]" "$@" |
@@ -92,16 +136,28 @@ outside_previews() {
     ' "$2"
 }
 
+adapters=$(adapter_targets)
+adapter_names=$(printf '%s\n' "$adapters" | sed 's|.*/||')
+feature_adapter_names=$(printf '%s\n' "$adapters" | grep -v '^Packages/Shared/' | sed 's|.*/||')
+adapter_modules=$(alternatives "$adapter_names")
+
 report "Features depend only on the shared package, DesignSystem and Networking" "$(
     package_dependencies features
 )"
 
-report "XCore and Shared import no UI framework or Networking" "$(
-    swift_grep -lE "import (SwiftUI|UIKit|Networking)${end}" Packages/*/Sources/*Core Packages/Shared/Sources/Shared
+report "XCore and Shared import no UI framework, Networking or adapter target" "$(
+    swift_grep -lE "import (SwiftUI|UIKit|Networking${adapter_modules:+|$adapter_modules})${end}" \
+        Packages/*/Sources/*Core Packages/Shared/Sources/Shared
 )"
 
-report "XUI and SharedUI import no Networking or Live target" "$(
-    swift_grep -lE "import (Networking|[A-Za-z]+Live)${end}" Packages/*/Sources/*UI
+report "XUI and SharedUI import no Networking or adapter target" "$(
+    swift_grep -lE "import (Networking${adapter_modules:+|$adapter_modules})${end}" Packages/*/Sources/*UI
+)"
+
+report "Adapter targets never import each other" "$(
+    printf '%s\n' "$adapters" | while IFS= read -r target; do
+        [ -n "$target" ] && imports_of_other_adapters "$target"
+    done
 )"
 
 report "Only the app's screens read services" "$(
@@ -124,15 +180,21 @@ if [ -n "$others" ]; then
     printf '%s\n' "$others" | sed 's/^/  /'
 fi
 
-# What a Live target imports beyond Foundation, the shared package, Networking and XCore reaches
-# the API or the store, unless a Core, UI or Shared target needs it too.
-live_modules=$(imported_modules Packages/*/Sources/*Live | grep -vxE 'Foundation|Shared|SharedLive|Networking|[A-Za-z]+Core')
-if [ -n "$live_modules" ]; then
-    modules=$(printf '%s\n' "$live_modules" | paste -s -d '|' -)
+# What an adapter target imports beyond Foundation, the shared package, Networking, XCore and the
+# other adapter targets is its source's, such as a store's framework, which the compiler doesn't
+# keep out of the other targets, unless a Core, UI or Shared target needs it too.
+source_modules=$(
+    printf '%s\n' "$adapters" | while IFS= read -r target; do
+        [ -n "$target" ] && imported_modules "$target"
+    done | sort -u |
+        grep -vxE "Foundation|Shared|Networking|[A-Za-z]+Core${adapter_modules:+|$adapter_modules}"
+)
+if [ -n "$source_modules" ]; then
+    modules=$(alternatives "$source_modules")
     shared=$(swift_grep -HnE "import[[:space:]]+(${modules})${end}" \
         Packages/*/Sources/*Core Packages/*/Sources/*UI Packages/Shared/Sources/Shared)
     if [ -n "$shared" ]; then
-        echo "REVIEW each imports a module a Live target imports too, which must be neither the API's nor the store's"
+        echo "REVIEW each imports a module an adapter target imports too, which must be no adapter target's source"
         printf '%s\n' "$shared" | sed 's/^/  /'
     fi
 fi

@@ -10,7 +10,7 @@ Ask for a feature, a screen, a link between two features, a move into packages o
 ## The architecture
 
 - **A package per capability.** Each feature owns every screen of its capability and the data behind them. Features never import each other; they meet only in the app, which links their screens and connects their data through small ports.
-- **Boundaries the compiler enforces.** A feature splits into `Core` for its domain, `UI` for view models and views, and `Live` for services over the API. `Core` imports neither SwiftUI nor the networking client, and the API's and the store's types never leave the `Live` targets, so a crossing fails the build.
+- **Boundaries the compiler enforces.** A feature splits into `Core` for its domain, `UI` for view models and views, and an adapter target for each source it reads, such as the API or a store on the device; each tested target has a test target of its own. `Core` imports neither SwiftUI nor the networking client, and each source's types stay in its adapter target, so a crossing fails the build or the skill's boundary script.
 - **A domain shaped for screens.** Models describe what the app shows, not what the API sends, and each feature has errors cased by what its screens tell apart.
 - **Predictable view models.** Data, loading and error for each resource, with the same shapes for paging, keyed loads, search and nested models, and the tests a bug would break.
 - **Native navigation across modules.** Features say where their views go, and the app decides which screen each place shows. By default it's `NavigationStack`, `NavigationLink(value:)` and sheets, with no routers inside features, coordinators or navigation libraries unless you ask for one.
@@ -23,10 +23,11 @@ The skill's examples follow a small movie browser on the TMDB API. Its Catalog f
 
 ```
 Packages/Catalog
-├── CatalogCore     movies, people, credits, errors; a service protocol and mock per screen
-├── CatalogUI       view models, views, destinations and strings for each screen
-├── CatalogLive     live services that map TMDB's responses into the domain
-└── CatalogTests    view model and mapping tests
+├── CatalogCore         movies, people, credits, errors; a service protocol and mock per screen
+├── CatalogUI           view models, views, destinations and strings for each screen
+├── CatalogTMDB         live services that map TMDB's responses into the domain
+├── CatalogUITests      view model tests
+└── CatalogTMDBTests    mapping tests
 ```
 
 ## Installation
@@ -75,7 +76,7 @@ The shapes use Swift 6 language mode and the SDK in Xcode 27 or later (Swift too
 
 | Area | Covers |
 |---|---|
-| Modules | What a feature is and where its boundary goes, `Package.swift`, the shared package and DesignSystem, strings and assets, building and testing, boundary checks, moving an app into packages |
+| Modules | What a feature is, its targets and where its boundary goes, `Package.swift`, the shared package and DesignSystem, strings and assets, building and testing, boundary checks, moving an app into packages |
 | Domain | Models, errors, service protocols, live services, mocks, ports between features, and data stored on the device |
 | Networking | The API package, its client, and how its errors reach a screen |
 | View models | Loading, several resources, paging, keyed loads, filtering and search, nested models, tests |
@@ -93,6 +94,7 @@ Not covered: visual design, accessibility, and the code inside each shape, which
 The skill decides the shapes; these skills cover the design before them and the code inside them. The agent invokes each where a checklist calls for it, such as the system design skill before a new feature and the testing skill before writing tests, and stops at the start of a task until you install any that are missing. Where one's advice differs, the skill's shapes win.
 
 - [System Design and Architecture](https://github.com/anthropics/knowledge-work-plugins), from Anthropic's Engineering plugin: a feature's requirements and trade-offs, and decision records for the choices the skill leaves open
+- [Swift API Design Guidelines](https://github.com/Erikote04/Swift-API-Design-Guidelines-Agent-Skill): names, argument labels and documentation comments for each module's API
 - [SwiftUI Pro](https://github.com/twostraws/SwiftUI-Agent-Skill): view bodies, modifiers, layout, data flow, localization, performance
 - [Swift Concurrency Pro](https://github.com/twostraws/Swift-Concurrency-Agent-Skill): loads, cancellation, actors, `Sendable` and strict-concurrency diagnostics
 - [Swift Testing Pro](https://github.com/twostraws/Swift-Testing-Agent-Skill): view model and mapping tests

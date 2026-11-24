@@ -11,6 +11,7 @@ Design, whatever the platform:
 
 The code inside a shape:
 
+- Names, argument labels and documentation comments of the API a module declares, by the Swift API Design Guidelines: `swift-api-design-guidelines-skill` ([source](https://github.com/Erikote04/Swift-API-Design-Guidelines-Agent-Skill))
 - View bodies, modifiers, layout, data flow, localization, previews, API availability and performance: `swiftui-pro` ([source](https://github.com/twostraws/SwiftUI-Agent-Skill))
 - Load bodies, stale-result guards, isolation, cancellation, actors, `Sendable` and strict-concurrency diagnostics: `swift-concurrency-pro` ([source](https://github.com/twostraws/Swift-Concurrency-Agent-Skill))
 - Test code, its stubs and fixtures included: `swift-testing-pro` ([source](https://github.com/twostraws/Swift-Testing-Agent-Skill))
@@ -18,10 +19,11 @@ The code inside a shape:
 
 ## Installing them
 
-Every one of these six skills is installed before any checklist starts. The skill list in the session is compared with their names; a skill installed with a plugin is present under its plugin's prefix, such as `engineering:system-design`. When any is missing, the user is asked, in one message, to install each with its source's command, and the task stops until every one is installed:
+Every one of these seven skills is installed before any checklist starts. The skill list in the session is compared with their names; a skill installed with a plugin is present under its plugin's prefix, such as `engineering:system-design`. When any is missing, the user is asked, in one message, to install each with its source's command, and the task stops until every one is installed:
 
 ```
 npx skills@1.9.0 add https://github.com/anthropics/knowledge-work-plugins --skill system-design architecture
+npx skills@1.9.0 add https://github.com/Erikote04/Swift-API-Design-Guidelines-Agent-Skill --skill swift-api-design-guidelines-skill
 npx skills@1.9.0 add https://github.com/twostraws/SwiftUI-Agent-Skill --skill swiftui-pro
 npx skills@1.9.0 add https://github.com/twostraws/Swift-Concurrency-Agent-Skill --skill swift-concurrency-pro
 npx skills@1.9.0 add https://github.com/twostraws/Swift-Testing-Agent-Skill --skill swift-testing-pro

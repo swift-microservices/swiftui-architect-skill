@@ -1,6 +1,6 @@
 # Domain models and services
 
-XCore holds a feature's domain: the models its screens show, the errors they can fail with, and a service protocol per screen. XLive implements those protocols over the API or the device's store and maps everything it receives into the domain, so XCore and XUI never know either exists.
+XCore holds a feature's domain: the models its screens show, the errors they can fail with, and a service protocol per screen. Its adapter targets implement those protocols, one target per source (the API, the device's store, a provider's SDK), and map everything they receive into the domain, so XCore and XUI never know a source exists.
 
 ## Contents
 - Domain models
@@ -14,7 +14,7 @@ XCore holds a feature's domain: the models its screens show, the errors they can
 
 ## Domain models
 
-A domain model describes what the app shows, not what the API sends. The API's shape (optional everything, snake_case fields, image paths, date strings, envelopes, pagination metadata) stops at the Live targets.
+A domain model describes what the app shows, not what the API sends. The API's shape (optional everything, snake_case fields, image paths, date strings, envelopes, pagination metadata) stops at the API's adapter targets.
 
 ```swift
 // What TMDB sends, as Networking's types: optional fields, a date as text, an image as a path.
@@ -82,7 +82,7 @@ public protocol MovieDetailService: Sendable {
 - Methods use untyped `throws` and name the error in the doc comment. Cancellation must reach the view model as `CancellationError`, which `throws(CatalogError)` couldn't carry.
 - Protocols refine `Sendable`, so `any MovieDetailService` crosses into the environment and a main-actor view model.
 - Nothing else sits between a view model and its sources: no repository, use case, interactor or manager. A live service calls the client itself.
-- A concern with a source of its own, such as recent searches, is a separate service the view model takes beside the screen's (`RecentSearchesService`). A capability another feature owns is a [port](#cross-feature-services-consumer-owned-ports).
+- A concern with a source of its own, such as recent searches, is a separate service the view model takes beside the screen's (`RecentSearchesService`), so every service has one source. A capability another feature owns is a [port](#cross-feature-services-consumer-owned-ports).
 
 ## Naming services and their methods
 
@@ -102,7 +102,7 @@ The split keeps call sites readable: the view model's `loadShelves()` changes st
 
 ## Live services
 
-XLive implements each protocol over the networking client. A live service is a struct holding the client, or an actor when it holds state.
+The API's adapter target implements each protocol over the networking client. A live service is a struct holding the client, or an actor when it holds state.
 
 ```swift
 public struct TMDBMovieDetailService: MovieDetailService {
@@ -128,19 +128,19 @@ public struct TMDBMovieDetailService: MovieDetailService {
 }
 ```
 
-- Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer, and a response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in SharedLive (`modules.md#shared-sharedui-and-sharedlive`).
+- Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer, and a response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in SharedTMDB (`modules.md#shared-sharedui-and-sharedtmdb`).
 - The feature's error maps from the client's error in an initializer, and `CancellationError` passes through untouched (`networking.md#errors-and-cancellation`).
-- A client step that two of a feature's live services share, such as reading extra artwork, is an internal extension on the client in XLive.
-- A client step that several features share, such as discovering movies by genre for Discover and for Search's filter, is a public extension in SharedLive's `Services/` (`TMDBClient+DiscoverMovies.swift`). It takes Shared values, returns a Shared model, and throws the client's error for each feature to map to its own.
+- A client step that two of a feature's live services share, such as reading extra artwork, is an internal extension on the client in XTMDB.
+- A client step that several features share, such as discovering movies by genre for Discover and for Search's filter, is a public extension in SharedTMDB's `Services/` (`TMDBClient+DiscoverMovies.swift`). It takes Shared values, returns a Shared model, and throws the client's error for each feature to map to its own.
 
 ## Data stored on the device
 
-Data the app keeps on the device, such as Search's recent searches, sits behind an XCore service protocol, with a mock, like data from the API, so views and view models never know where it's kept. Which store keeps it is the user's answer (`decisions.md#always-asked`), and the store's types stay in the Live targets the way the API's types do.
+Data the app keeps on the device, such as Search's recent searches, sits behind an XCore service protocol, with a mock, like data from the API, so views and view models never know where it's kept. Which store keeps it is the user's answer (`decisions.md#always-asked`), and the store's adapter target (`Search<Store>`) holds the store's types (`modules.md#feature-packages`).
 
-- Stored models live in XLive's `Storage/`, named for the domain model they map to (`StoredRecentSearch`), and map to the domain like responses do. What only the store needs, such as the date that orders the list, stays in the stored model.
+- Stored models live in that target's `Storage/`, named for the domain model they map to (`StoredRecentSearch`), and map to the domain like responses do. What only the store needs, such as the date that orders the list, stays in the stored model.
 - The live service is named for its store, returns domain values, and throws the feature's `unavailable` when the store fails.
 - XUI never reads the store, not even through view APIs the store provides: the view model loads stored data like any resource, and loads it again after changing it through the service.
-- `<AppName>App.init` opens the store once, beside the client, and passes it to each live service that keeps data. A stored model is public only when the app needs it to open the store.
+- `<AppName>App.init` opens the store once, beside the client, and passes it to each live service that keeps data.
 
 ## Mocks
 
@@ -179,7 +179,7 @@ extension MovieDetailService where Self == MockMovieDetailService {
 
 - A scenario lets each preview show one state the screen really has; `.mock` stays the plain sample.
 - A mock that keeps state, such as a watchlist that remembers toggles, is an actor, and `.mock` returns a fresh instance.
-- Tests use private stubs in XTests instead (`modules.md#testing`).
+- Tests use private stubs in their own test target instead (`modules.md#testing`).
 
 ## Cross-feature services: consumer-owned ports
 

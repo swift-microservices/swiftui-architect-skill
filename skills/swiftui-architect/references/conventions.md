@@ -8,19 +8,20 @@
 
 `X` is a feature's name in UpperCamelCase (`Catalog`), or one of its screens' (`MovieCast`); `x` is lowerCamelCase. A screen uses its noun in every slot (`MovieCastService`, `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`), and what spans the feature uses the feature's name (`CatalogDestination`, `CatalogError`). Which name a screen, model or shared view takes inside a feature is in `modules.md#inside-a-feature`.
 
-Names follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/): they read as English at the call site, name things by role, and avoid abbreviations. Things and side-effect-free reads are nouns, changes are imperative verbs, and Booleans read as assertions.
+Names follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/), applied with `swift-api-design-guidelines-skill` (`related-skills.md`). This table holds the names the skill's shapes take, which win where the two differ.
 
 | Kind | Name | Example |
 |---|---|---|
 | Feature package | the capability, never a screen, a tab that gathers several capabilities or a model other features show (`modules.md#defining-features`) | `Discover`, `Catalog`, `Watchlist`; not `MovieDetail`, `Home` or `Movie` |
-| Feature targets | `XCore`, `XUI`, `XLive`, `XTests` | `CatalogUI` |
+| Feature targets | `XCore`, `XUI`; an adapter target per source, `X` + the source's name: the API's, the store's the user picked or a provider's; a test target per tested target, its name + `Tests` | `CatalogUI`, `CatalogTMDB`, `Search<Store>`, `CatalogUITests` |
+| The shared package's targets | `Shared`, `SharedUI`, and `Shared` + the API's name for its adapter target | `SharedTMDB` |
 | Domain model | a plain noun for the whole thing; never ends in `Detail` or a transport word | `Movie`, `Genre`, `DiscoverShelf` |
 | What a list shows of a model | the model's name + `Summary` | `MovieSummary` |
 | A model's id | `let id` of its real type, which `Identifiable` names `X.ID`; signatures name the summary's | `MovieSummary.ID` |
 | A name an imported module declares | a qualifier from the domain | `MovieCollection`, not `Collection` |
 | Feature error | `XError`; one per screen when their failures differ | `CatalogError.notFound`, `GenreDetailError` |
 | Service protocol (XCore) | `XService`, one per screen; another for each concern with a source of its own; never a `…Repository`, `…UseCase` or `…Manager` | `DiscoverService`, `MovieCastService`, `RecentSearchesService` |
-| Service implementation (XLive) | its source + the protocol's name: the API, or the store the user picked | `TMDBDiscoverService` |
+| Service implementation (adapter target) | its source + the protocol's name: the API, the store the user picked or a provider | `TMDBDiscoverService` |
 | Mock (XCore) | `Mock` + the protocol's name, exposed as `.mock`, and `.mock(_:)` for a scenario | `MockDiscoverService`, `.mock(.failure(.offline))` |
 | Consumer-owned port, and its app adapter | named for the consumer's need; an adapter is the protocol's name with `Adapter` for `Service` | `WatchlistMembershipService`, `WatchlistMembershipAdapter` |
 | Service reads and changes | noun phrases for what reads return; imperative verbs for changes | `movie(id:)`, `shelves(page:)`; `addToWatchlist(_:)` |
@@ -44,7 +45,7 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | App screen | `XScreen` | `MovieDetailScreen` |
 | App entry point | `<AppName>App` | `MoviesApp` |
 | Environment key | `xService` in `EnvironmentValues+XService.swift` | `\.discoverService` |
-| Stored model (XLive) | `Stored` + the domain model it maps to | `StoredRecentSearch` |
+| Stored model (the store's adapter target) | `Stored` + the domain model it maps to | `StoredRecentSearch` |
 | Mapping file | `Model+Source.swift` | `Movie+TMDB.swift` |
 | Display mapping | a property returning localized text, in `Model+Title.swift` | `Department.title` |
 
@@ -54,9 +55,9 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 |---|---|
 | XCore | `Models/`; `Services/`, with a folder per service protocol holding it and its mock (`Services/MovieDetailService/`) |
 | XUI | a folder per screen: its view model and nested models, views, toolbar, paging footers and display mappings, with a subfolder per mode or set of sections (`GenreDetail/Search/`, `MovieDetail/Sections/`); `Components/`: the views and display mappings several screens use, filed by kind (`Cards/`, `Rails/`); `Navigation/`; `Resources/` |
-| XLive | `Mapping/`, `Services/`, `Storage/` for stored models |
-| XTests | `ViewModels/`, `Live/`, `Fixtures.swift` |
-| Shared | `Domain/`; SharedUI: `Components/`, `Navigation/`, `Resources/`; SharedLive: `Mapping/`, and `Services/` for client steps several features share |
+| Adapter target | `Mapping/`, `Services/`; the store's adds `Storage/` for stored models |
+| Test target | a file per view model, per adapter target's mappings and per live service with rules of its own (`MovieCastViewModelTests.swift`, `CatalogMappingTests.swift`); `Fixtures.swift` |
+| Shared | `Domain/`; SharedUI: `Components/`, `Navigation/`, `Resources/`; SharedTMDB: `Mapping/`, and `Services/` for client steps several features share |
 | Networking | the client, its error, and the API's types |
 | App | `App/`, `Adapters/`, `Extensions/Environment/`, `Navigation/`, `Screens/` |
 
