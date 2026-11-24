@@ -1,6 +1,6 @@
 ---
 name: swiftui-architect
-description: Architects modular SwiftUI apps. Use when adding a feature or screen, modularizing an iOS app, designing services, view models or navigation, or placing a type, even if no architecture is named.
+description: Architects and checks modular SwiftUI apps. Use when adding a feature or screen, modularizing an app, designing services, view models or navigation, or placing types, even if no architecture is named.
 license: MIT
 metadata:
   author: Zaid Rahhawi
@@ -13,7 +13,7 @@ metadata:
 
 Decides where code lives in a modular SwiftUI app, who owns it, and the shape of the pieces that hold it together: modules, domain models, services, view models, views, app composition, navigation and naming.
 
-A shape this skill states, such as a view model's state or `XView`'s `.task`, overrides other skills' patterns. What fills it, from code to library or store, comes from the related skills, a search and the user ([decisions.md](references/decisions.md)).
+Its shapes override other skills' patterns; what fills them, from code to library or store, comes from the related skills, a search and the user ([decisions.md](references/decisions.md)).
 
 `X` stands for a feature (`Catalog`) or a screen (`MovieCast` → `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`); a tab's root screen is named for its tab (`DiscoverView`), anything else for what it is ([inside a feature](references/modules.md#inside-a-feature)). A *screen* is one navigable page; its feature exports the view.
 
@@ -21,10 +21,10 @@ An app built another way keeps its structure and conventions until the user asks
 
 ## Prerequisites
 
-- Xcode with Swift 6.4 or later, whose SDK has the APIs the shapes use ([the template](references/modules.md#packageswift-template)).
+- Xcode with Swift 6.4 or later and its SDK ([the template](references/modules.md#packageswift-template)).
 - An iOS Simulator runtime: `swift build` and `swift test` build for the Mac ([testing](references/modules.md#testing)).
 - Web access for the search ([decisions.md](references/decisions.md)).
-- The [related skills](#related-skills) `system-design`, `architecture`, `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`.
+- The [related skills](#related-skills) `system-design`, `architecture`, `swift-api-design-guidelines-skill`, `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`.
 
 ## Examples
 
@@ -43,14 +43,13 @@ The examples are one movie browser on the TMDB API:
 ```
 App target            composition root: services, screens, routing
 ├── Feature packages  one per capability (Discover, Catalog, Search, …)
-│   XCore     domain models, errors, a service protocol and mock per screen
-│   XUI       view models, views, XDestination, strings
-│   XLive     live services: API responses → domain models
-│   XTests    view model and mapping tests
+│   XCore       domain models, errors, a service protocol and mock per screen
+│   XUI         view models, views, XDestination, strings
+│   X<Source>   an adapter target per source, the API (XTMDB), a store or an SDK: live services
 └── Below the features
     Shared        Shared: domain vocabulary several features use (Foundation only)
                   SharedUI: views several features show, SharedDestination
-                  SharedLive: API mappings and client steps several features share
+                  SharedTMDB: API mappings and client steps several features share
     DesignSystem  domain-free tokens, styles and components
     Networking    the API's types and client
 ```
@@ -60,21 +59,21 @@ App target            composition root: services, screens, routing
 Each module imports only what its arrow points at; nothing points back up.
 
 ```
-App        → XCore, XUI, XLive, Shared, SharedUI, DesignSystem, Networking
+App        → XCore, XUI, adapter targets, Shared, SharedUI, DesignSystem, Networking
 XUI        → XCore, Shared, SharedUI, DesignSystem
-XLive      → XCore, Shared, SharedLive, Networking
+X<Source>  → XCore, Shared, its source (Networking and SharedTMDB for XTMDB)
 XCore      → Shared
-XTests     → XCore, XUI, XLive, Shared, SharedUI, Networking
+X…Tests    → the target they test, and what their tests name
 SharedUI   → Shared, DesignSystem
-SharedLive → Shared, Networking
+SharedTMDB → Shared, Networking
 Shared, DesignSystem, Networking → Apple frameworks and their own dependencies
 ```
 
 Hard rules:
 - A feature never imports another. Features meet only in the app: links through its destination mapping, data through ports it implements.
 - XCore never imports SwiftUI or Networking.
-- The API's and the store's types never leave the Live targets (XLive, SharedLive), which map them to domain models and their errors to the feature's errors.
-- DesignSystem knows no domain: no feature models, services or destinations.
+- A source's types never leave its adapter targets, which map them to domain models and its errors to the feature's.
+- DesignSystem knows no feature's models, services or destinations.
 
 ## Who owns what
 
@@ -87,20 +86,18 @@ Hard rules:
 
 ## Principles
 
-1. **Features are capabilities**, never a screen, a tab or a model other features show; each owns every screen of its capability, every tab's root screen included, and what they share ([defining features](references/modules.md#defining-features)).
-2. **Duplicate before sharing** until a second feature needs the same concept and both copies must change together.
-3. **Every module builds, previews and tests on its own**, XUI on XCore's mocks.
-4. **Native SwiftUI navigation by default**: no navigation library or wrapper views around stacks unless the user asks.
-5. **One screen per kind of content.** Things that load, page and search alike share a screen; things that differ get their own, never one screen that switches on its input.
+1. **Features are capabilities**, never a screen, a tab or a model other features show; each owns every screen of its capability, tab roots included, and what they share ([defining features](references/modules.md#defining-features)).
+2. **Every module builds, previews and tests on its own**, XUI on XCore's mocks.
+3. **Native SwiftUI navigation by default**: no navigation library or wrapper views around stacks unless the user asks.
+4. **One screen per kind of content.** Things that load, page and search alike share a screen; things that differ get their own, never one screen that switches on its input.
 
 ## The shapes in brief
 
 - **Models speak the app's language.** Domain models are `Equatable`, `Sendable` values shaped for what a screen shows, unable to hold an illogical value (`Movie`; `MovieSummary` in a list). A feature's error enum is cased by what its screens show (`offline`, `notFound`, `unavailable`); an empty answer is never an error.
-- **Services do the work.** One protocol per screen in XCore returns view-ready domain values (`Page<Item>` when paged) and throws the feature's error; XLive implements it. No repository, use case or manager sits between a service and its view model.
+- **Services do the work.** One `Sendable` protocol per screen in XCore returns view-ready domain values (`Page<Item>` when paged) and throws the feature's error; an adapter target implements it over one source, as a struct, or an actor when it holds state. No repository, use case or manager sits between a service and its view model.
 - **View models hold state.** `@MainActor @Observable public final class XViewModel` per screen, taking IDs and services and assigning what they return. Each resource has its data, `isLoading…` and `…Error`; a paged one adds `next…Page`, `isLoadingNext…Page` and `next…PageError`. A part only some views read, with its own input or loading, is a nested `@Observable` model, never a `…ViewModel`.
 - **Views stay plain**: no routers, navigation closures or service lookups. `XView` owns the view model as its only `@State`, puts it in the environment and starts the loads. `XPhaseView` picks what the loads' state shows, and `XContentView` lays out the values it's given.
 - **Navigation.** Views push their feature's `XDestination` cases with `NavigationLink(value:)`, or `SharedDestination` for places several features open, and take from the app only the screens they present, which are cases too.
-- **Concurrency.** Services are `Sendable`; a live service is a struct, or an actor when it holds state, as is a mock that does.
 
 ## Common Issues
 
@@ -112,7 +109,7 @@ Hard rules:
 
 | Reference | Read when |
 |---|---|
-| [modules.md](references/modules.md) | Feature boundaries and what screens share; `Package.swift` and its settings; the shared package, DesignSystem; strings, assets; testing, reviews; moving an app into packages |
+| [modules.md](references/modules.md) | Feature boundaries, targets and the package template; the shared package, DesignSystem; strings, assets; testing, reviews; moving an app into packages |
 | [domain.md](references/domain.md) | Models, errors, services, mocks, ports and their names; shared state; stored data |
 | [networking.md](references/networking.md) | Adding an endpoint; the API client and its errors |
 | [view-models.md](references/view-models.md) | Loading, several resources, paging, keys, filtering, nested models, modes, tests |
@@ -138,13 +135,13 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 ```
 - [ ] Check the capability is new (references/modules.md#defining-features); a screen showing what a feature owns joins it (Add a screen)
 - [ ] Search online and ask what's always asked (references/decisions.md); design with system-design, open choices with architecture
-- [ ] Packages/X, named for the capability: XCore, XUI, XLive, XTests (template in references/modules.md)
-- [ ] XCore: models, XError, and per screen a service protocol and mock (`.mock`)
+- [ ] Packages/X, named for the capability: XCore, XUI, an adapter target per source, a test target per tested target (references/modules.md#feature-packages)
+- [ ] XCore, with swift-api-design-guidelines-skill: models, XError, and per screen a service protocol and mock (`.mock`)
 - [ ] Networking: a client method per endpoint it calls
-- [ ] XLive, with swift-concurrency-pro: a live service per protocol, mapping responses to the domain and the client's error to XError; stored data with swiftdata-pro if it's SwiftData
+- [ ] Adapter targets, with swift-concurrency-pro: a live service per protocol, mapping its source's values to the domain and errors to XError; stored data with swiftdata-pro if it's SwiftData
 - [ ] XUI, with swiftui-pro and swift-concurrency-pro: XViewModel, XView, XPhaseView, XContentView, XDestination, Localizable.xcstrings; push places another feature already links to as `SharedDestination`
-- [ ] XTests, with swift-testing-pro: the screen's own rules and mappings (references/view-models.md#testing-view-models)
-- [ ] App: add the package to the Xcode project, linking XCore, XUI, XLive
+- [ ] Test targets, with swift-testing-pro: the screens' own rules and the mappings (references/modules.md#testing)
+- [ ] App: add the package to the Xcode project, linking XCore, XUI and the adapter targets
 - [ ] App: per service protocol, an environment key, the service built in <AppName>App.init and injected on the Scene
 - [ ] App: an XScreen per screen but a tab's root screen, presented ones included; Destination and DestinationView cases; Destination.init(_: XDestination) and its line in navigationDestinations()
 - [ ] App, for a tab's root screen: a TabDestination case, its Tab in ContentView, and a tab XScreen owning the stack, with navigationDestinations() at its root
@@ -155,17 +152,17 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 
 ```
 - [ ] Search online and ask what's always asked (references/decisions.md), then design with system-design
-- [ ] XCore: the screen's models, service protocol and mock; Networking and XLive, with swift-concurrency-pro: its client methods and live service
+- [ ] XCore, with swift-api-design-guidelines-skill: the screen's models, service protocol and mock; Networking and the adapter target, with swift-concurrency-pro: its client methods and live service
 - [ ] XUI, with swiftui-pro and swift-concurrency-pro: the screen's folder with its view model and views; an XDestination case, pushed with NavigationLink(value:)
 - [ ] XUI: a section another screen of the feature already shows moves to Components/, named for what it is
-- [ ] XTests, with swift-testing-pro: the screen's own rules, such as paging, and mappings
+- [ ] Tests, with swift-testing-pro: the screen's own rules, such as paging, and its mappings
 - [ ] App: environment key, service built and injected; XScreen; Destination case, mapping and DestinationView case
 - [ ] Verify
 ```
 
 **Modularize an existing app**: copy the checklist in [moving an app into packages](references/modules.md#moving-an-app-into-packages).
 
-**Add search**: across the app → a Search tab, its own feature. Through what a screen shows → XViewModel [filters the loaded values](references/view-models.md#filtering-loaded-values). On the server, in one screen → a `SearchSession` [mode](references/view-models.md#modes) nested in XViewModel.
+**Add search**: across the app → a Search tab, its own feature; through what a screen shows → [a filter](references/view-models.md#filtering-loaded-values); on the server, in one screen → a `SearchSession` [mode](references/view-models.md#modes).
 
 **Link one feature to another** (Watchlist opens sign-in)
 
@@ -173,7 +170,7 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 - [ ] Search online (references/decisions.md)
 - [ ] Place: a `SharedDestination` case if one exists; else move another feature's XDestination case there with its mapping; else a new case in the source's XDestination (`.signIn`)
 - [ ] Source: push it with NavigationLink(value:), or present it from XView if the design shows it over the screen (references/navigation.md#presenting-a-screen)
-- [ ] Data another feature owns (Catalog asks Watchlist if a movie is kept): a port in the source's XCore, with a mock
+- [ ] Data another feature owns (Catalog asks Watchlist if a movie is kept): a port and mock in the source's XCore, with swift-api-design-guidelines-skill
 - [ ] App, for a port: an adapter over the owner's service (which gains what the port needs), built in <AppName>App.init, injected by environment key, passed by the source's XScreen
 - [ ] App, for a new case: its mapping in Destination.init(_: SourceDestination); the source's XDestination in navigationDestinations() if new
 - [ ] App, for a presented place: the source's XScreen passes DestinationView to its XView
@@ -193,8 +190,8 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 
 **Decide where a type belongs**
 
-1. Used by one feature, from any of its screens → that feature: XCore for models and contracts, XUI for anything visual or localized, XLive for mapping.
-2. Needed by a second feature, both changing together → Shared for a model, SharedUI for a view, SharedLive for a mapping to a Shared model or a client step both call.
+1. Used by one feature, from any of its screens → that feature: XCore for models and contracts, XUI for anything visual or localized, the source's adapter target for mapping.
+2. Needed by a second feature, both changing together → Shared for a model, SharedUI for a view, SharedTMDB for a mapping to a Shared model or a client step both call.
 3. Only looks alike → duplicate it.
 4. Visual and domain-free → DesignSystem; talks to the API → Networking; wires features together → the app.
 

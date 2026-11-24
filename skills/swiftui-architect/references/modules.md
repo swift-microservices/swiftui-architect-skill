@@ -8,7 +8,7 @@ The app is built from local Swift packages: one per feature, plus the shared pac
 - Inside a feature
 - Folder layout
 - Package.swift template
-- Shared, SharedUI and SharedLive
+- Shared, SharedUI and SharedTMDB
 - DesignSystem
 - Networking and other infrastructure
 - Localization, assets and fonts
@@ -31,7 +31,7 @@ Decide a boundary by change and meaning:
 Then check what a split costs. Only three things cross between features:
 - IDs, through destinations
 - narrow questions, through ports (`domain.md#cross-feature-services-consumer-owned-ports`), as Catalog asks Watchlist whether a movie is kept
-- the shared vocabulary, through [the shared package](#shared-sharedui-and-sharedlive)
+- the shared vocabulary, through [the shared package](#shared-sharedui-and-sharedtmdb)
 
 A split that needs more, such as one side's own types or a port for most of what the other does, is one feature.
 
@@ -42,23 +42,26 @@ Avoid:
 - A package per screen (`MovieDetail`, `MovieCast`). It splits one model across packages, so features import each other or the shared package grows.
 - A package per tab that gathers several capabilities (`Home`), or per model other features show (`Movie`, `Person`, `Genre`). Every screen shows several such models, so their packages would import each other, which features never do.
 - A package per layer (`Models`, `Services`, `Views`) that every feature shares.
-- Moving a model to the shared package to avoid a port ([the promotion rule](#shared-sharedui-and-sharedlive)).
+- Moving a model to the shared package to avoid a port ([the promotion rule](#shared-sharedui-and-sharedtmdb)).
 
 ## Feature packages
 
-Each feature is one package with four targets:
+Each feature is one package: its domain and UI, an adapter target for each source its services read, and a test target for each target with tests ([testing](#testing)).
 
 | Target | Contains | Imports |
 |---|---|---|
 | `XCore` | Domain models, `XError`, a service protocol and mock per screen, ports | `Shared` |
 | `XUI` | View models, views, `XDestination`, `Localizable.xcstrings`, display mappings | `XCore`, `Shared`, `SharedUI`, `DesignSystem` |
-| `XLive` | Live services over the API or the device's store, mapping what they return and their errors to the domain | `XCore`, `Shared`, `SharedLive`, `Networking` |
-| `XTests` | View model and mapping tests | `XCore`, `XUI`, `XLive`, `Shared`, `SharedUI`, and `Networking` for response fixtures |
+| `X<Source>`, an adapter target | The live services over one source, mapping what it returns and its errors to the domain. The source is the API (`CatalogTMDB`), the store the user picked (`Search<Store>`) or a provider's SDK | `XCore`, `Shared` and its source: `Networking` and `SharedTMDB` for the API |
+
+A feature declares only the adapter targets its services read: Catalog is `CatalogCore`, `CatalogUI` and `CatalogTMDB`, tested in `CatalogUITests` and `CatalogTMDBTests`; Search adds `Search<Store>` for its recent searches.
 
 - XCore has no SwiftUI and no infrastructure, so the domain stays testable and usable by any UI.
-- XUI depends on XCore's protocols, never on XLive, so it builds, previews and tests on mocks alone.
-- XLive is the only feature target that sees the API or the store.
-- The app links all three library targets: it builds live services from XLive and shows views from XUI (`composition.md`).
+- XUI depends on XCore's protocols, never on an adapter target, so it builds, previews and tests on mocks alone.
+- A source's types never leave its adapter targets: the API's stay in XTMDB and SharedTMDB, the store's in X<Store>. Every service has one source (`domain.md#service-protocols`), so each live service sits in one adapter target.
+- Adapter targets never import each other. The API's import the shared package's, SharedTMDB, which stands below every feature.
+- Mappings and stored models are `package`, so the package's test targets reach them and the app sees only the `public` live services. A stored model is `public` only when the app needs it to open the store, and SharedTMDB's mappings are `public`, since other packages' adapter targets use them.
+- The app links XCore, XUI and the adapter targets: it builds live services from the adapter targets and shows views from XUI (`composition.md`).
 
 ## Inside a feature
 
@@ -91,7 +94,7 @@ Packages/Catalog/
 │   │       ├── MovieCastService/            MovieCastService.swift, MockMovieCastService.swift
 │   │       ├── PersonDetailService/         PersonDetailService.swift, MockPersonDetailService.swift
 │   │       └── WatchlistMembershipService/  WatchlistMembershipService.swift, MockWatchlistMembershipService.swift
-│   ├── CatalogLive/
+│   ├── CatalogTMDB/
 │   │   ├── Mapping/           Movie+TMDB.swift, CastMember+TMDB.swift, Person+TMDB.swift, Credit+TMDB.swift,
 │   │   │                      CatalogError+TMDB.swift
 │   │   └── Services/          TMDBMovieDetailService.swift, TMDBMovieCastService.swift, TMDBPersonDetailService.swift
@@ -105,11 +108,10 @@ Packages/Catalog/
 │       │   └── Cards/         CastMemberCard.swift
 │       ├── Navigation/        CatalogDestination.swift
 │       └── Resources/         Localizable.xcstrings
-└── Tests/CatalogTests/
-    ├── Live/                  CatalogMappingTests.swift
-    ├── ViewModels/            MovieDetailViewModelTests.swift, MovieCastViewModelTests.swift,
-    │                          PersonDetailViewModelTests.swift
-    └── Fixtures.swift
+└── Tests/
+    ├── CatalogTMDBTests/      CatalogMappingTests.swift, Fixtures.swift
+    └── CatalogUITests/        MovieDetailViewModelTests.swift, MovieCastViewModelTests.swift,
+                               PersonDetailViewModelTests.swift, Fixtures.swift
 ```
 
 Where each file goes: `conventions.md#folders`.
@@ -139,7 +141,7 @@ let package = Package(
     products: [
         .library(name: "CatalogCore", targets: ["CatalogCore"]),
         .library(name: "CatalogUI", targets: ["CatalogUI"]),
-        .library(name: "CatalogLive", targets: ["CatalogLive"]),
+        .library(name: "CatalogTMDB", targets: ["CatalogTMDB"]),
     ],
     dependencies: [
         .package(path: "../Shared"),
@@ -168,23 +170,30 @@ let package = Package(
             swiftSettings: swiftSettings
         ),
         .target(
-            name: "CatalogLive",
+            name: "CatalogTMDB",
             dependencies: [
                 "CatalogCore",
                 .product(name: "Shared", package: "Shared"),
-                .product(name: "SharedLive", package: "Shared"),
+                .product(name: "SharedTMDB", package: "Shared"),
                 .product(name: "Networking", package: "Networking"),
             ],
             swiftSettings: swiftSettings
         ),
         .testTarget(
-            name: "CatalogTests",
+            name: "CatalogUITests",
             dependencies: [
-                "CatalogCore",
                 "CatalogUI",
-                "CatalogLive",
+                "CatalogCore",
                 .product(name: "Shared", package: "Shared"),
-                .product(name: "SharedUI", package: "Shared"),
+            ],
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
+            name: "CatalogTMDBTests",
+            dependencies: [
+                "CatalogTMDB",
+                "CatalogCore",
+                .product(name: "Shared", package: "Shared"),
                 .product(name: "Networking", package: "Networking"),
             ],
             swiftSettings: swiftSettings
@@ -196,10 +205,10 @@ let package = Package(
 
 - Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.4 or later, whose SDK has the APIs the shapes use.
 - Every target builds in Swift 6 mode with these settings, the defaults Swift is moving to, and a package added later starts from them.
-- Imports are internal by default: a file imports a module `public` when its public declarations use the module's types, and plainly otherwise. It imports every module whose members it uses, since `MemberImportVisibility` hides the rest.
+- Imports are internal by default: a file imports a module `public` or `package` when its declarations of that access use the module's types, and plainly otherwise. It imports every module whose members it uses, since `MemberImportVisibility` hides the rest.
 - No package sets `.defaultIsolation(MainActor.self)`: domain types, errors and destinations cross actors, so UI types are marked `@MainActor` instead.
 
-## Shared, SharedUI and SharedLive
+## Shared, SharedUI and SharedTMDB
 
 The shared package mirrors a feature's layers:
 
@@ -207,7 +216,7 @@ The shared package mirrors a feature's layers:
 |---|---|---|
 | `Shared` | `Domain/`: the vocabulary several features share (`MovieSummary`, `Page<Item>`) | Foundation only |
 | `SharedUI` | `Components/`: views several features show (`MovieSummaryCard`) and the shared screen states (`ContentUnavailableView.offline(retry:)`) with their copy. `Navigation/`: `SharedDestination` (`navigation.md#shareddestination-sharedui`) | `Shared`, `DesignSystem` |
-| `SharedLive` | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, `Page+TMDB.swift`), tested in `SharedLiveTests`. `Services/`: a step on the client that several features' live services share (`domain.md#live-services`) | `Shared`, `Networking` |
+| `SharedTMDB`, the API's adapter target | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, `Page+TMDB.swift`), tested in `SharedTMDBTests`. `Services/`: a step on the client that several features' live services share (`domain.md#live-services`) | `Shared`, `Networking` |
 
 ```swift
 /// One page of a paginated list, as a service returns it.
@@ -223,16 +232,14 @@ public struct Page<Item: Sendable>: Sendable {
 }
 ```
 
-**The promotion rule.** A type moves into Shared or SharedUI, and a mapping or client step into SharedLive, only when a second feature needs the same concept and both copies must change together. It holds both ways: what only one feature uses belongs in that feature, however many of its screens use it. Two types that merely look alike are duplicated; they will diverge.
+**The promotion rule.** A type moves into Shared or SharedUI, and a mapping or client step into SharedTMDB, only when a second feature needs the same concept and both copies must change together. It holds both ways: what only one feature uses belongs in that feature, however many of its screens use it. Two types that merely look alike are duplicated; they will diverge.
 
 Never in the shared package:
 - Errors, service protocols, ports, live services or stored models; each feature maps the client's errors to its own
 - Navigation types other than `SharedDestination`
 - Environment keys, app state or preferences
-- The API's types outside SharedLive
+- The API's types outside SharedTMDB
 - "Utils" grab-bags; a helper lives next to the concept it serves
-
-Test fixtures are repeated in each feature that needs them, with no shared testing target.
 
 ## DesignSystem
 
@@ -245,7 +252,7 @@ It never knows a feature model, service, destination or screen, has no strings o
 
 ## Networking and other infrastructure
 
-`Networking` holds the API's types and the app's client over them (`networking.md`). It and any other infrastructure package, such as analytics, are imported by the Live targets, XTests and the app, never by XCore or XUI.
+`Networking` holds the API's types and the app's client over them (`networking.md`). It and any other infrastructure package, such as analytics, are imported by adapter targets, their test targets and the app, never by XCore or XUI.
 
 They import no feature. What they need from one, such as who is signed in, the app passes in as a closure when it builds their clients.
 
@@ -261,16 +268,19 @@ Each module owns the strings, images and colors it shows. How they're declared a
 
 ## Testing
 
-Each feature package builds, previews and tests without the app. Test what a bug would break, not what every instance of a shape repeats; how to write the tests, their stubs and test data included, is `swift-testing-pro`'s subject (`related-skills.md`).
+Each feature package builds, previews and tests without the app. Each tested target has its own test target, named for it, so view model tests never build against the API and mapping tests never build views. Test what a bug would break, not what every instance of a shape repeats; how to write the tests, their stubs and test data included, is `swift-testing-pro`'s subject (`related-skills.md`).
 
 | Behavior | Tested in |
 |---|---|
-| A screen's own rules: what it loads, its failure rule, paging, stale results (`view-models.md#testing-view-models`) | `XTests/ViewModels` |
-| Mapping: what a response becomes, and the next page | `XTests/Live` and `SharedLiveTests` |
-| A live service's own rules over the store, such as newest first and no repeats | `XTests/Live` |
+| A screen's own rules: what it loads, its failure rule, paging, stale results (`view-models.md#testing-view-models`) | `XUITests` |
+| Mapping: what a response becomes, and the next page | `XTMDBTests`, and `SharedTMDBTests` for the shared mappings |
+| A live service's own rules over the store, such as newest first and no repeats | `X<Store>Tests` |
 | Requests, decoding, error classification and cancellation | `NetworkingTests` |
-| `Destination` mappings that aren't one-to-one, and adapters | app tests |
+| `Destination` mappings that aren't one-to-one, and the app's port adapters | app tests |
 | Visual states: loading, empty, error | previews |
+
+- A test target imports the target it tests and the modules whose types its tests name, as the template's two do, never an adapter target it doesn't test.
+- Fixtures are repeated in each test target that needs them, with no shared testing target.
 
 After every change to a feature, test its package's scheme on an iOS Simulator from the package's folder, and build the app after changing anything public:
 
@@ -282,7 +292,7 @@ xcodebuild test -scheme Catalog-Package -destination 'platform=iOS Simulator,nam
 
 ## Checking the boundaries
 
-The compiler enforces what each package declares, but not system frameworks, the app target or the roles types play. This skill's `scripts/check_boundaries.sh` checks the rest. Run it from the app's repository root, with no arguments; it prints each failure under the rule it breaks and exits non-zero on any. Under REVIEW it lists each package dependency besides the shared package, DesignSystem and Networking, which must be infrastructure, such as analytics, and each module a Live target imports that a Core, UI or Shared target imports too, which must be neither the API's nor the store's.
+The compiler enforces what each package declares, but not system frameworks, the app target or the roles types play. This skill's `scripts/check_boundaries.sh` checks the rest. Run it from the app's repository root, with no arguments; it prints each failure under the rule it breaks and exits non-zero on any. Under REVIEW it lists each package dependency besides the shared package, DesignSystem and Networking, which must be infrastructure, such as analytics, and each module that an adapter target and a Core, UI or Shared target both import, which must be no adapter target's source: the compiler keeps out a package it isn't given, but not a system framework such as a store's.
 
 A review copies this checklist into the response:
 
@@ -291,7 +301,7 @@ A review copies this checklist into the response:
 - [ ] Each feature passes the boundary tests (references/modules.md#defining-features) and owns all its screens; the shared package holds nothing only one feature uses
 - [ ] Each screen: one view model, built by its XScreen, over its own service protocol and ports
 - [ ] Hand-rolled schemes where a standard or a proven approach exists (references/decisions.md#the-established-approach-first)
-- [ ] The code inside the shapes with its related skills: views with swiftui-pro, loads and live services with swift-concurrency-pro, tests with swift-testing-pro, stored data with swiftdata-pro if it's SwiftData
+- [ ] The code inside the shapes with its related skills: names and each module's API with swift-api-design-guidelines-skill, views with swiftui-pro, loads and live services with swift-concurrency-pro, tests with swift-testing-pro, stored data with swiftdata-pro if it's SwiftData
 - [ ] Report each finding with its file, the rule it breaks and the fix; change code only when the user asks
 ```
 
