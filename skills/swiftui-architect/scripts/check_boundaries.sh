@@ -68,6 +68,13 @@ package_dependencies() {
     done
 }
 
+# imported_modules <folders…>: each module the Swift files under the folders import, one per line.
+imported_modules() {
+    swift_grep -hE "^[[:space:]]*(@[A-Za-z]+[[:space:]]+)*([a-z]+[[:space:]]+)?import[[:space:]]" "$@" |
+        sed -E 's/.*import[[:space:]]+((typealias|struct|class|enum|protocol|let|var|func)[[:space:]]+)?([A-Za-z0-9_]+).*/\3/' |
+        sort -u
+}
+
 # outside_previews <pattern> <file>: each line of the file matching the pattern outside a
 # #Preview block.
 outside_previews() {
@@ -89,16 +96,12 @@ report "Features depend only on the shared package, DesignSystem and Networking"
     package_dependencies features
 )"
 
-report "XCore and Shared import no UI framework, SwiftData or Networking" "$(
-    swift_grep -lE "import (SwiftUI|UIKit|SwiftData|Networking)${end}" Packages/*/Sources/*Core Packages/Shared/Sources/Shared
+report "XCore and Shared import no UI framework or Networking" "$(
+    swift_grep -lE "import (SwiftUI|UIKit|Networking)${end}" Packages/*/Sources/*Core Packages/Shared/Sources/Shared
 )"
 
-report "XUI and SharedUI import no Networking, SwiftData or Live target" "$(
-    swift_grep -lE "import (Networking|SwiftData|[A-Za-z]+Live)${end}" Packages/*/Sources/*UI
-)"
-
-report "Generated API types stay in the Live targets, Networking and tests" "$(
-    swift_grep -l 'Components\.Schemas' . | grep -vE '(^|/)Sources/([A-Za-z]*Live|Networking)/|(^|/)Tests/'
+report "XUI and SharedUI import no Networking or Live target" "$(
+    swift_grep -lE "import (Networking|[A-Za-z]+Live)${end}" Packages/*/Sources/*UI
 )"
 
 report "Only the app's screens read services" "$(
@@ -112,21 +115,26 @@ report "Destinations register only at stack roots, so a package registers them o
 )"
 
 report "No type plays a role the architecture leaves out" "$(
-    swift_grep -HnE "(class|struct|enum|actor|protocol) [A-Za-z]+(Repository|UseCase|Interactor|Manager|Coordinator)${end}" .
-)"
-
-report "No package defaults to the main actor" "$(
-    grep -Hn 'defaultIsolation' Packages/*/Package.swift 2>/dev/null
-)"
-
-report "Views use generated string and asset symbols" "$(
-    swift_grep -HnE '(Text|Button|Label|Toggle|Image|navigationTitle)\("' Packages/*/Sources
+    swift_grep -HnE "(class|struct|enum|actor|protocol) [A-Za-z]+(Repository|UseCase|Interactor|Manager)${end}" .
 )"
 
 others=$(package_dependencies others)
 if [ -n "$others" ]; then
     echo "REVIEW each is an infrastructure package, such as analytics, never a feature"
     printf '%s\n' "$others" | sed 's/^/  /'
+fi
+
+# What a Live target imports beyond Foundation, the shared package, Networking and XCore reaches
+# the API or the store, unless a Core, UI or Shared target needs it too.
+live_modules=$(imported_modules Packages/*/Sources/*Live | grep -vxE 'Foundation|Shared|SharedLive|Networking|[A-Za-z]+Core')
+if [ -n "$live_modules" ]; then
+    modules=$(printf '%s\n' "$live_modules" | paste -s -d '|' -)
+    shared=$(swift_grep -HnE "import[[:space:]]+(${modules})${end}" \
+        Packages/*/Sources/*Core Packages/*/Sources/*UI Packages/Shared/Sources/Shared)
+    if [ -n "$shared" ]; then
+        echo "REVIEW each imports a module a Live target imports too, which must be neither the API's nor the store's"
+        printf '%s\n' "$shared" | sed 's/^/  /'
+    fi
 fi
 
 if [ "$failed" -eq 0 ]; then

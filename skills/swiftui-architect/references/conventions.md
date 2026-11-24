@@ -20,11 +20,11 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | A name an imported module declares | a qualifier from the domain | `MovieCollection`, not `Collection` |
 | Feature error | `XError`; one per screen when their failures differ | `CatalogError.notFound`, `GenreDetailError` |
 | Service protocol (XCore) | `XService`, one per screen; another for each concern with a source of its own; never a `…Repository`, `…UseCase` or `…Manager` | `DiscoverService`, `MovieCastService`, `RecentSearchesService` |
-| Service implementation (XLive) | its source + the protocol's name | `TMDBDiscoverService`, `SwiftDataRecentSearchesService` |
+| Service implementation (XLive) | its source + the protocol's name: the API, or the store the user picked | `TMDBDiscoverService` |
 | Mock (XCore) | `Mock` + the protocol's name, exposed as `.mock`, and `.mock(_:)` for a scenario | `MockDiscoverService`, `.mock(.failure(.offline))` |
 | Consumer-owned port, and its app adapter | named for the consumer's need; an adapter is the protocol's name with `Adapter` for `Service` | `WatchlistMembershipService`, `WatchlistMembershipAdapter` |
 | Service reads and changes | noun phrases for what reads return; imperative verbs for changes | `movie(id:)`, `shelves(page:)`; `addToWatchlist(_:)` |
-| API client and its error | the API's name + `Client` / `Error`; client methods keep the spec's operation names | `TMDBClient.movieDetails(id:)`, `TMDBError` |
+| API client and its error | the API's name + `Client` / `Error`; client methods keep the API's operation names | `TMDBClient.movieDetails(id:)`, `TMDBError` |
 | View model | `XViewModel`, one per screen | `MovieCastViewModel` |
 | View model actions | imperative verbs; `refresh()` beside `load()` on a screen with a paged list | `load()`, `refresh()`, `loadNextShelvesPage()`, `select(_:)` |
 | Resource state | the data, `isLoading…`, `…Error` (`view-models.md#one-resource-data-activity-and-error`) | `shelves`, `isLoadingShelves`, `shelvesError` |
@@ -45,9 +45,8 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | App entry point | `<AppName>App` | `MoviesApp` |
 | Environment key | `xService` in `EnvironmentValues+XService.swift` | `\.discoverService` |
 | Stored model (XLive) | `Stored` + the domain model it maps to | `StoredRecentSearch` |
-| Mapping file | `Model+Source.swift` | `Movie+TMDB.swift`, `RecentSearch+SwiftData.swift` |
-| Display mapping | a property returning `LocalizedStringResource`, in `Model+Title.swift` | `Department.title` |
-| Test fixture | `make…` | `makeMovie(id:title:)` |
+| Mapping file | `Model+Source.swift` | `Movie+TMDB.swift` |
+| Display mapping | a property returning localized text, in `Model+Title.swift` | `Department.title` |
 
 ## Folders
 
@@ -58,7 +57,7 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | XLive | `Mapping/`, `Services/`, `Storage/` for stored models |
 | XTests | `ViewModels/`, `Live/`, `Fixtures.swift` |
 | Shared | `Domain/`; SharedUI: `Components/`, `Navigation/`, `Resources/`; SharedLive: `Mapping/`, and `Services/` for client steps several features share |
-| Networking | `openapi.yaml`, `openapi-generator-config.yaml`, the client, its error, `Middleware/` |
+| Networking | the client, its error, and the API's types |
 | App | `App/`, `Adapters/`, `Extensions/Environment/`, `Navigation/`, `Screens/` |
 
 One type per file, named after the type; a nested model's file adds it to its view model's name (`MovieDetailViewModel+WatchlistMembership.swift`). Small private helper views may share their parent's file.

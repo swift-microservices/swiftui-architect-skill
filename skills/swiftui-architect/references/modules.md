@@ -53,7 +53,7 @@ Each feature is one package with four targets:
 | `XCore` | Domain models, `XError`, a service protocol and mock per screen, ports | `Shared` |
 | `XUI` | View models, views, `XDestination`, `Localizable.xcstrings`, display mappings | `XCore`, `Shared`, `SharedUI`, `DesignSystem` |
 | `XLive` | Live services over the API or the device's store, mapping what they return and their errors to the domain | `XCore`, `Shared`, `SharedLive`, `Networking` |
-| `XTests` | View model and mapping tests (Swift Testing) | `XCore`, `XUI`, `XLive`, `Shared`, `SharedUI`, and `Networking` for response fixtures |
+| `XTests` | View model and mapping tests | `XCore`, `XUI`, `XLive`, `Shared`, `SharedUI`, and `Networking` for response fixtures |
 
 - XCore has no SwiftUI and no infrastructure, so the domain stays testable and usable by any UI.
 - XUI depends on XCore's protocols, never on XLive, so it builds, previews and tests on mocks alone.
@@ -122,9 +122,12 @@ Where each file goes: `conventions.md#folders`.
 import PackageDescription
 
 let swiftSettings: [SwiftSetting] = [
+    .enableUpcomingFeature("ExistentialAny"),
+    .enableUpcomingFeature("MemberImportVisibility"),
+    .enableUpcomingFeature("InternalImportsByDefault"),
     .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
     .enableUpcomingFeature("InferIsolatedConformances"),
-    .enableUpcomingFeature("MemberImportVisibility"),
+    .strictMemorySafety(),
 ]
 
 let package = Package(
@@ -191,10 +194,10 @@ let package = Package(
 )
 ```
 
-- Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.4 or later: the shapes use its SDK's `@ContentBuilder` and the `item:` forms of `alert` and `confirmationDialog`. The swift settings above are what the architecture relies on.
-- An API newer than the deployment target goes behind `if #available`; it never raises the target.
-- Never add `.defaultIsolation(MainActor.self)` to a package. Generated OpenAPI code doesn't build under it, and domain models, errors and destinations must stay nonisolated; UI types are marked `@MainActor` explicitly. Only the app target may default to the main actor.
-- No `@unchecked Sendable`, `nonisolated(unsafe)` or `@preconcurrency` in feature packages: a type that would need one becomes a value type or an actor.
+- Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.4 or later, whose SDK has the APIs the shapes use.
+- Every target builds in Swift 6 mode with these settings, the defaults Swift is moving to, and a package added later starts from them.
+- Imports are internal by default: a file imports a module `public` when its public declarations use the module's types, and plainly otherwise. It imports every module whose members it uses, since `MemberImportVisibility` hides the rest.
+- No package sets `.defaultIsolation(MainActor.self)`: domain types, errors and destinations cross actors, so UI types are marked `@MainActor` instead.
 
 ## Shared, SharedUI and SharedLive
 
@@ -204,13 +207,13 @@ The shared package mirrors a feature's layers:
 |---|---|---|
 | `Shared` | `Domain/`: the vocabulary several features share (`MovieSummary`, `Page<Item>`) | Foundation only |
 | `SharedUI` | `Components/`: views several features show (`MovieSummaryCard`) and the shared screen states (`ContentUnavailableView.offline(retry:)`) with their copy. `Navigation/`: `SharedDestination` (`navigation.md#shareddestination-sharedui`) | `Shared`, `DesignSystem` |
-| `SharedLive` | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, and `Page+TMDB.swift` for the API's page numbers as `nextPage`), tested in `SharedLiveTests`. `Services/`: a step on the client that several features' live services share (`domain.md#live-services`) | `Shared`, `Networking` |
+| `SharedLive` | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, `Page+TMDB.swift`), tested in `SharedLiveTests`. `Services/`: a step on the client that several features' live services share (`domain.md#live-services`) | `Shared`, `Networking` |
 
 ```swift
 /// One page of a paginated list, as a service returns it.
 public struct Page<Item: Sendable>: Sendable {
     public let items: [Item]
-    /// The page to request next, or `nil` when this is the last one. Pages start at 1.
+    /// The page to request next, or `nil` when this is the last one.
     public let nextPage: Int?
 
     public init(items: [Item], nextPage: Int?) {
@@ -220,15 +223,13 @@ public struct Page<Item: Sendable>: Sendable {
 }
 ```
 
-`nextPage` has the type the API pages by: an `Int` for TMDB's numbered pages, a `String` for an API that pages by cursor.
-
 **The promotion rule.** A type moves into Shared or SharedUI, and a mapping or client step into SharedLive, only when a second feature needs the same concept and both copies must change together. It holds both ways: what only one feature uses belongs in that feature, however many of its screens use it. Two types that merely look alike are duplicated; they will diverge.
 
 Never in the shared package:
 - Errors, service protocols, ports, live services or stored models; each feature maps the client's errors to its own
 - Navigation types other than `SharedDestination`
 - Environment keys, app state or preferences
-- Generated API types outside SharedLive
+- The API's types outside SharedLive
 - "Utils" grab-bags; a helper lives next to the concept it serves
 
 Test fixtures are repeated in each feature that needs them, with no shared testing target.
@@ -236,62 +237,61 @@ Test fixtures are repeated in each feature that needs them, with no shared testi
 ## DesignSystem
 
 One domain-free package, imported by every UI target, holding the visual language:
-- **Tokens** for color, spacing and type under one namespace (`DesignSystem.Colors`, `DesignSystem.Spacing`), named as the design names them.
-- **Styles** for native controls, as conformances to SwiftUI's style protocols exposed as static members, so features keep using `Button` and `NavigationLink` and only pick a style.
+- **Tokens** for color, spacing and type, named as the design names them.
+- **Styles** for native controls, so features keep using `Button` and `NavigationLink` and only pick a style.
 - **Components** that take plain values and `@ContentBuilder` closures, such as a rail or a remote image.
 
 It never knows a feature model, service, destination or screen, has no strings of its own, and decides no policy. A view that renders a domain type belongs in a feature, or in SharedUI when several features show it.
 
 ## Networking and other infrastructure
 
-`Networking` generates the API's types and client and wraps them in the app's client (`networking.md`). It and any other infrastructure package, such as analytics, are imported by the Live targets, XTests and the app, never by XCore or XUI.
+`Networking` holds the API's types and the app's client over them (`networking.md`). It and any other infrastructure package, such as analytics, are imported by the Live targets, XTests and the app, never by XCore or XUI.
 
-They import no feature. What they need from one, such as the signed-in account's current token for an auth header, the app passes in as a closure when it builds their clients.
+They import no feature. What they need from one, such as who is signed in, the app passes in as a closure when it builds their clients.
 
 ## Localization, assets and fonts
 
-Each module owns the strings, images and colors it shows, and reaches them through symbols Xcode generates, so a missing key or asset is a build error, not a blank at runtime.
+Each module owns the strings, images and colors it shows. How they're declared and read is `swiftui-pro`'s subject (`related-skills.md`).
 
 - **Strings.** Each XUI target has a String Catalog (`Resources/Localizable.xcstrings`) for everything its views show; the app has one for its own chrome. SharedUI's catalog holds only copy every feature must say the same way, such as the shared screen states. A string two features show is duplicated in each catalog.
-- A key names its feature and screen (`catalog.movieCast.title`), and views use its generated symbol (`Text(.catalogMovieCastTitle)`), which carries its module's bundle.
+- A key names its feature and screen (`catalog.movieCast.title`).
 - Display mappings are XUI extensions on domain values (`Department.title`); models and view models hold no display strings.
-- **Images and colors.** A feature's artwork lives in its XUI target, shared icons and colors in DesignSystem, the app icon in the app. Use the generated symbols (`Image(.emptyWatchlist)`), never `Image("name")`.
-- **Custom fonts** ship in DesignSystem, which registers them itself, once, since a package has no Info.plist.
-- The app sets `LOCALIZATION_PREFERS_STRING_CATALOGS`, `STRING_CATALOG_GENERATE_SYMBOLS`, `SWIFT_EMIT_LOC_STRINGS` and `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS`; each package with resources declares `defaultLocalization`.
+- **Images and colors.** A feature's artwork lives in its XUI target, shared icons and colors in DesignSystem, the app icon in the app.
+- **Custom fonts** ship in DesignSystem.
 
 ## Testing
 
-Each feature package builds, previews and tests without the app. Test what a bug would break, not what every instance of a shape repeats.
+Each feature package builds, previews and tests without the app. Test what a bug would break, not what every instance of a shape repeats; how to write the tests, their stubs and test data included, is `swift-testing-pro`'s subject (`related-skills.md`).
 
 | Behavior | Tested in |
 |---|---|
-| A screen's own rules: what it loads, its failure rule, paging, stale results (`view-models.md#testing-view-models`) | `XTests/ViewModels`, with private actor stubs |
-| Mapping: dropped incomplete items, paging metadata | `XTests/Live` and `SharedLiveTests`, with hand-built generated types |
+| A screen's own rules: what it loads, its failure rule, paging, stale results (`view-models.md#testing-view-models`) | `XTests/ViewModels` |
+| Mapping: what a response becomes, and the next page | `XTests/Live` and `SharedLiveTests` |
 | A live service's own rules over the store, such as newest first and no repeats | `XTests/Live` |
-| Requests, decoding, error classification and cancellation | `NetworkingTests`, with a stub transport |
+| Requests, decoding, error classification and cancellation | `NetworkingTests` |
 | `Destination` mappings that aren't one-to-one, and adapters | app tests |
 | Visual states: loading, empty, error | previews |
-
-Test data comes from `make…` factories (`makeMovie(id:title:)`) in each test target's `Fixtures.swift`.
 
 After every change to a feature, test its package's scheme on an iOS Simulator from the package's folder, and build the app after changing anything public:
 
 ```
-xcodebuild test -scheme Catalog-Package -destination 'platform=iOS Simulator,name=<an installed iPhone>' -skipPackagePluginValidation
+xcodebuild test -scheme Catalog-Package -destination 'platform=iOS Simulator,name=<an installed iPhone>'
 ```
 
-`swift build` and `swift test` build for the Mac, where an iOS-only package's views and view models don't compile. `-skipPackagePluginValidation` lets Networking's generator plugin run without Xcode's trust prompt.
+`swift build` and `swift test` build for the Mac, where an iOS-only package's views and view models don't compile.
 
 ## Checking the boundaries
 
-The compiler enforces what each package declares, but not system frameworks, the app target or the roles types play. This skill's `scripts/check_boundaries.sh` checks the rest. Run it from the app's repository root, with no arguments; it prints each failure under the rule it breaks and exits non-zero on any. Under REVIEW it lists each package dependency besides the shared package, DesignSystem and Networking, which must be infrastructure, such as analytics.
+The compiler enforces what each package declares, but not system frameworks, the app target or the roles types play. This skill's `scripts/check_boundaries.sh` checks the rest. Run it from the app's repository root, with no arguments; it prints each failure under the rule it breaks and exits non-zero on any. Under REVIEW it lists each package dependency besides the shared package, DesignSystem and Networking, which must be infrastructure, such as analytics, and each module a Live target imports that a Core, UI or Shared target imports too, which must be neither the API's nor the store's.
 
 A review copies this checklist into the response:
 
 ```
-- [ ] Run scripts/check_boundaries.sh from the repository root, and confirm each REVIEW line is infrastructure
+- [ ] Run scripts/check_boundaries.sh from the repository root, and settle each REVIEW line
 - [ ] Each feature passes the boundary tests (references/modules.md#defining-features) and owns all its screens; the shared package holds nothing only one feature uses
 - [ ] Each screen: one view model, built by its XScreen, over its own service protocol and ports
+- [ ] Hand-rolled schemes where a standard or a proven approach exists (references/decisions.md#the-established-approach-first)
+- [ ] The code inside the shapes with its related skills: views with swiftui-pro, loads and live services with swift-concurrency-pro, tests with swift-testing-pro, stored data with swiftdata-pro if it's SwiftData
 - [ ] Report each finding with its file, the rule it breaks and the fix; change code only when the user asks
 ```
 
@@ -306,7 +306,7 @@ Restructuring moves the app in steps that each leave it building. Copy this chec
 - [ ] Networking, then DesignSystem, then the shared package with only what two features already share; build the app after each
 - [ ] One feature at a time, the one using the fewest others first so it needs the fewest ports, as in SKILL.md's Add a feature: its reach into other features becomes destinations and ports, and the code still in the app target switches to its public API
 - [ ] As screens leave the app target, their services move into <AppName>App.init and their navigation into Router, Destination, DestinationView and navigationDestinations()
-- [ ] Build the app and run every package's tests after each step; fix and repeat until they pass
+- [ ] After each step, SKILL.md's Verify; fix and repeat until it passes
 ```
 
 - A step that would leave the app unbuildable is split into smaller ones, never left half done.

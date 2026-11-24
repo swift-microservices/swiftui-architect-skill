@@ -13,7 +13,7 @@ The app target is the composition root. It is the only module that imports every
 
 ```
 MoviesApp/
-├── MoviesApp.swift                 @main: client, model container, services, Scene
+├── MoviesApp.swift                 @main: client, store, services, Scene
 ├── App/ContentView.swift           the window's Router and its TabView
 ├── Adapters/                       consumer-owned ports implemented over other features
 ├── Extensions/Environment/         one @Entry key per service protocol
@@ -21,11 +21,9 @@ MoviesApp/
 └── Screens/                        one XScreen per screen
 ```
 
-The app target may use MainActor default isolation, since it only composes SwiftUI; packages never do (`modules.md#packageswift-template`).
-
 ## `<AppName>App.swift`
 
-Build the client, the model container (`domain.md#data-stored-on-the-device`) and every service and adapter in `init()`, store them as `let` properties typed as the feature protocols, and inject them on the `Scene`, so every window and screen sees the same instances. No DI container and no singletons.
+Build the client, the store (`domain.md#data-stored-on-the-device`) and every service and adapter in `init()`, keep them as `let` properties typed as the feature protocols, and inject them on the `Scene`, so every window and screen sees the same instances. No DI container and no singletons.
 
 ```swift
 @main
@@ -37,7 +35,7 @@ struct MoviesApp: App {
 
     init() {
         do {
-            let client = try TMDBClient(session: .shared)
+            let client = try TMDBClient(…)
             let watchlistService = TMDBWatchlistService(client: client)
 
             discoverService = TMDBDiscoverService(client: client)
@@ -63,8 +61,8 @@ struct MoviesApp: App {
 
 - Live or mock is the app's decision, through configuration or launch arguments for UI tests. Features never decide.
 - One service instance per protocol for the app's lifetime; views never create services.
-- App-wide policies (URL sessions, caches, tint) are applied here, not in features or DesignSystem.
-- Values that differ by build, such as the API's base URL and key, come from the app's build settings and reach the client through its init. A key is never written in source or committed.
+- App-wide policies, such as caching and tint, are applied here, not in features or DesignSystem.
+- Values that differ by build, such as the API's base URL and key, reach the client through its init from the app. A key is never written in source or committed.
 
 ## Environment keys
 
@@ -91,13 +89,13 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
-            Tab(.appTabDiscover, systemImage: "sparkles", value: .discover) {
+            Tab(.appTabDiscover, systemImage: …, value: .discover) {
                 DiscoverScreen()
             }
-            Tab(.appTabWatchlist, systemImage: "bookmark", value: .watchlist) {
+            Tab(.appTabWatchlist, systemImage: …, value: .watchlist) {
                 WatchlistScreen()
             }
-            Tab(.appTabSearch, systemImage: "magnifyingglass", value: .search, role: .search) {
+            Tab(.appTabSearch, systemImage: …, value: .search, role: .search) {
                 SearchScreen()
             }
         }

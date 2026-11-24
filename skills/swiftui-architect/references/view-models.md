@@ -1,6 +1,6 @@
 # View models
 
-A view model loads what one screen shows and exposes it as state. Services do the work (mapping and aggregation) and return view-ready domain values; the view model assigns them and tracks loading, errors and paging. How to write the loads inside these shapes (tasks, isolation, task groups) is `swift-concurrency-pro`'s subject ([related skills](../SKILL.md#related-skills)).
+A view model loads what one screen shows and exposes it as state. Services do the work (mapping and aggregation) and return view-ready domain values; the view model assigns them and tracks loading, errors and paging. How to write the loads inside these shapes (tasks, isolation, task groups, stale-result guards) is `swift-concurrency-pro`'s subject (`related-skills.md`).
 
 ## Contents
 - The shape
@@ -72,7 +72,7 @@ A screen can have data while it refreshes, data and a failed refresh, or an erro
 
 - A load sets `isLoading…` when it starts and clears it when it succeeds or fails. On success it assigns the data and clears the error. On failure it keeps the data and records the error, so the error stays on screen through a retry until a load succeeds.
 - An error that isn't the property's type records the type's fallback case (`.unavailable`).
-- Cancellation is never a failure: a cancelled load returns without changing anything, `isLoading…` included. `XView` runs `load()` from `.task`, which cancels it when the view disappears and runs it again, as a silent refresh, when the view reappears (`views.md#xview-xphaseview-and-xcontentview`); that load, or a new key's, ends the loading. A cancelled load can finish after its replacement starts, so a `defer` that clears `isLoading…` would hide the progress of the load still running. The networking client delivers a cancelled request as `CancellationError` (`networking.md#errors-and-cancellation`).
+- Cancellation is never a failure: a cancelled load returns without changing anything, `isLoading…` included. `XView` runs `load()` from `.task`, which cancels it when the view disappears and runs it again, as a silent refresh, when the view reappears (`views.md#xview-xphaseview-and-xcontentview`); that load, or a new key's, ends the loading. The networking client delivers a cancelled request as `CancellationError` (`networking.md#errors-and-cancellation`).
 - A load never guards against a call already in flight. Overlapping loads fetch the same data, so the last to finish wins, and a guard would block a load that `.task` restarted, such as a paging footer's after it scrolls out and back in.
 - A resource keeps only the state its views read. One the screen leaves out when it fails, such as Discover's featured movies, keeps just its data: its load assigns on success and does nothing on failure.
 
@@ -208,10 +208,10 @@ func loadCredits() async { … }
 - Changing the key is synchronous: it empties the data, clears its error and paging, and sets `isLoading…` when a load follows. The old key's data never shows under the new one.
 - A control that picks the key calls `select(_:)` rather than setting the key, so the reset always runs.
 - `XView` loads from `.task(id: viewModel.selectedDepartment)`, the first load included; `load()` loads the rest of the screen.
-- A load remembers the key it started with. SwiftUI cancels the old key's load, but a response can arrive before the cancellation does, so a load whose key is no longer selected returns as a cancelled one does, dropping its result and its error.
+- A load whose key is no longer selected drops its result and its error, as a cancelled load does.
 - A keyed resource beside the thing a screen shows, such as the credits under a person's details, is a section of the content, with the control that picks its key, its own progress and its own error. The phase view follows the person, so a new key never blanks the screen.
 - A keyed paged list, such as search results, guards its load on the list like a [screen's](#coming-back-to-a-paged-list). A new key empties the list, so the new key's load gets through.
-- Typed text is input, not a key: a plain `var` the field binds. `XView` applies it to the key after a pause in typing, and at once on submit or when the field is cleared. The pause is `.task(id: viewModel.text)` sleeping briefly: the next keystroke cancels it, so the text applies only if the sleep ends uncancelled, never after a `try?` that swallows the cancellation.
+- Typed text is input, not a key: a plain `var` the field binds. `XView` applies it to the key after a pause in typing, and at once on submit or when the field is cleared.
 
 ## Filtering loaded values
 
@@ -341,7 +341,7 @@ extension GenreDetailViewModel {
 
 ## Testing view models
 
-Swift Testing, `@MainActor` suites, `@testable import XUI`, and a private actor stub of the service in each test file. Tests that interleave two loads use a stub that holds a request until the test releases it. How to write the tests themselves is `swift-testing-pro`'s subject ([related skills](../SKILL.md#related-skills)).
+How to write the tests, their stubs included, is `swift-testing-pro`'s subject (`related-skills.md`).
 
 Test the rules a bug would break on this screen, not the shape every view model shares:
 - What a load asks the service for: the ID, key or page.
