@@ -1,6 +1,6 @@
 ---
 name: swiftui-architect
-description: Architects modular SwiftUI apps. Use when adding a feature or screen, modularizing an iOS app, designing services, view models or navigation, or placing a type, even if no architecture is named.
+description: Architects and checks modular SwiftUI apps. Use when adding a feature or screen, modularizing an app, designing services, view models or navigation, or placing types, even if no architecture is named.
 license: MIT
 metadata:
   author: Zaid Rahhawi
