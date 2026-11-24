@@ -13,6 +13,7 @@ Native SwiftUI navigation by default: `NavigationStack(path:)`, `NavigationLink(
 - Push or present
 - Presenting a screen
 - Sheets, covers and alerts
+- Linking two features
 - Previews
 
 ## The model
@@ -290,6 +291,21 @@ func applyFilter() { … }
 - A presented view that needs a title or a close button owns an unmanaged `NavigationStack`. That stack registers no destinations, so a `NavigationLink(value:)` in it does nothing; when the design pushes from what's presented, it's a screen the app presents ([presenting a screen](#presenting-a-screen)).
 - A presentation about one value, such as the watchlist item a row asks to remove, is that value as an optional (`var itemToRemove: WatchlistItem?`). It shows while the value is set, its actions receive the value, and dismissing it sets the value back to `nil`. No `Bool` sits beside the value, since the two could disagree.
 - A screen with several sheets holds one optional `Identifiable` enum of them (`presentedSheet`), never a `Bool` each, so only one is ever up.
+
+## Linking two features
+
+A link to another feature's screen, a port to its data, or both. Copy this checklist into the response:
+
+```
+- [ ] Search online (references/decisions.md)
+- [ ] Place: a `SharedDestination` case if one exists; else move another feature's XDestination case there with its mapping; else a new case in the source's XDestination (`.signIn`)
+- [ ] Source: push it with NavigationLink(value:), or present it from XView if the design shows it over the screen (references/navigation.md#presenting-a-screen)
+- [ ] Data another feature owns (Catalog asks Watchlist if a movie is kept): a port and mock in the source's XCore, with swift-api-design-guidelines-skill
+- [ ] App, for a port: an adapter over the owner's service (which gains what the port needs), built in <AppName>App.init, injected by environment key, passed by the source's XScreen
+- [ ] App, for a new case: its mapping in Destination.init(_: SourceDestination); the source's XDestination in navigationDestinations() if new
+- [ ] App, for a presented place: the source's XScreen passes DestinationView to its XView
+- [ ] SKILL.md's Verify
+```
 
 ## Previews
 

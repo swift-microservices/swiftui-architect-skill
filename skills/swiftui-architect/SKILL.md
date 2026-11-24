@@ -11,20 +11,13 @@ metadata:
 
 ## Purpose
 
-Decides where code lives in a modular SwiftUI app, who owns it, and the shape of the pieces that hold it together: modules, domain models, services, view models, views, app composition, navigation and naming.
+Decides where code lives in a modular SwiftUI app, who owns it, the shape of the pieces that hold it together and how the code reads: modules, domain models, services, view models, views, app composition, navigation, naming and style.
 
-Its shapes override other skills' patterns; what fills them, from code to library or store, comes from the related skills, a search and the user ([decisions.md](references/decisions.md)).
+Its shapes override other skills' patterns; what fills them comes from the related skills, a search and the user ([decisions.md](references/decisions.md)).
 
-`X` stands for a feature (`Catalog`) or a screen (`MovieCast` → `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`); a tab's root screen is named for its tab (`DiscoverView`), anything else for what it is ([inside a feature](references/modules.md#inside-a-feature)). A *screen* is one navigable page; its feature exports the view.
+`X` stands for a feature (`Catalog`) or a screen (`MovieCast` → `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`), a tab's root screen named for its tab ([inside a feature](references/modules.md#inside-a-feature)). A *screen* is one navigable page; its feature exports the view.
 
 An app built another way keeps its structure and conventions until the user asks to change them, taking a shape from this skill only where it has none.
-
-## Prerequisites
-
-- Xcode with Swift 6.4 or later and its SDK ([the template](references/modules.md#packageswift-template)).
-- An iOS Simulator runtime: `swift build` and `swift test` build for the Mac ([testing](references/modules.md#testing)).
-- Web access for the search ([decisions.md](references/decisions.md)).
-- The [related skills](#related-skills) `system-design`, `architecture`, `swift-api-design-guidelines-skill`, `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`.
 
 ## Examples
 
@@ -47,7 +40,7 @@ App target            composition root: services, screens, routing
 │   XUI         view models, views, XDestination, strings
 │   X<Source>   an adapter target per source, the API (XTMDB), a store or an SDK: live services
 └── Below the features
-    Shared        Shared: domain vocabulary several features use (Foundation only)
+    Shared        Shared: domain vocabulary several features use
                   SharedUI: views several features show, SharedDestination
                   SharedTMDB: API mappings and client steps several features share
     DesignSystem  domain-free tokens, styles and components
@@ -56,7 +49,7 @@ App target            composition root: services, screens, routing
 
 ## Dependency direction
 
-Each module imports only what its arrow points at; nothing points back up.
+Each module imports only what its arrow names; nothing points back up.
 
 ```
 App        → XCore, XUI, adapter targets, Shared, SharedUI, DesignSystem, Networking
@@ -71,7 +64,7 @@ Shared, DesignSystem, Networking → Apple frameworks and their own dependencies
 
 Hard rules:
 - A feature never imports another. Features meet only in the app: links through its destination mapping, data through ports it implements.
-- XCore never imports SwiftUI or Networking.
+- XCore and Shared link only Foundation, Shared and libraries with no I/O and no store, transport or UI types ([what Core may link](references/modules.md#what-core-may-link)).
 - A source's types never leave its adapter targets, which map them to domain models and its errors to the feature's.
 - DesignSystem knows no feature's models, services or destinations.
 
@@ -83,6 +76,7 @@ Hard rules:
 | The client and services, injected through environment keys; each screen and its view model | App: `<AppName>App.init`; an `XScreen` per screen |
 | Navigation state; which screen each destination shows | App: a `Router` per window, `Destination`, `DestinationView` |
 | What a screen presents, the value a presentation is about, a sheet's draft | Its view model, as plain `var`s its views bind |
+| Work no screen starts, such as sync | The feature whose data it changes: a [lifetime service](references/domain.md#lifetime-services) the app starts |
 
 ## Principles
 
@@ -94,37 +88,62 @@ Hard rules:
 ## The shapes in brief
 
 - **Models speak the app's language.** Domain models are `Equatable`, `Sendable` values shaped for what a screen shows, unable to hold an illogical value (`Movie`; `MovieSummary` in a list). A feature's error enum is cased by what its screens show (`offline`, `notFound`, `unavailable`); an empty answer is never an error.
-- **Services do the work.** One `Sendable` protocol per screen in XCore returns view-ready domain values (`Page<Item>` when paged) and throws the feature's error; an adapter target implements it over one source, as a struct, or an actor when it holds state. No repository, use case or manager sits between a service and its view model.
+- **Services do the work.** One `Sendable` protocol per screen in XCore returns view-ready domain values (`Page<Item>` when paged) and throws the feature's error; an adapter target implements it over one source. No repository, use case or manager sits between a service and its view model.
 - **View models hold state.** `@MainActor @Observable public final class XViewModel` per screen, taking IDs and services and assigning what they return. Each resource has its data, `isLoading…` and `…Error`; a paged one adds `next…Page`, `isLoadingNext…Page` and `next…PageError`. A part only some views read, with its own input or loading, is a nested `@Observable` model, never a `…ViewModel`.
 - **Views stay plain**: no routers, navigation closures or service lookups. `XView` owns the view model as its only `@State`, puts it in the environment and starts the loads. `XPhaseView` picks what the loads' state shows, and `XContentView` lays out the values it's given.
-- **Navigation.** Views push their feature's `XDestination` cases with `NavigationLink(value:)`, or `SharedDestination` for places several features open, and take from the app only the screens they present, which are cases too.
+- **Navigation.** Views push their feature's `XDestination` cases, or `SharedDestination` for places several features open, with `NavigationLink(value:)`; the app supplies only the screens they present.
 
-## Common Issues
+## Code style
 
-- Register destinations only at stack roots, every type through `navigationDestinations()`: registered in a feature screen, they register again when it appears twice in a stack.
+Code reads like the requirement it implements, with Apple's WWDC sample code as the bar ([style.md](references/style.md)):
+- Build, then call: outside a view's body, a value a call takes is a named `let`, and `try` or `await` never sits in an argument.
+- One `do` holds a live service's path through its `return`, each `catch` ends its own, and nothing is declared before the `do` for a `catch` to fill.
+- No helper methods in live services or mappings; no `Result` juggling, steering flags, `try?` or force unwraps.
+- A `Task {}` starts only in a view's action or `<AppName>App.init`; unchecked concurrency only where a dependency needs it.
+
+## Troubleshooting
+
+- Only stack roots apply `navigationDestinations()`, and every one does: a link whose type no stack registers does nothing, and a feature screen's registration repeats when it appears twice in a stack.
 - `XScreen` builds a view model on every `body` pass and `XView` keeps the first, so its `init` only assigns.
-- A type named like an SDK type (`Collection`, `Section`) is ambiguous where both are imported; qualify it (`MovieCollection`).
+- A service left off the `Scene` falls back to its key's mock, and its screen shows sample data: `<AppName>App` injects every key.
 
-## References
+## Prerequisites
 
-| Reference | Read when |
-|---|---|
-| [modules.md](references/modules.md) | Feature boundaries, targets and the package template; the shared package, DesignSystem; strings, assets; testing, reviews; moving an app into packages |
-| [domain.md](references/domain.md) | Models, errors, services, mocks, ports and their names; shared state; stored data |
-| [networking.md](references/networking.md) | Adding an endpoint; the API client and its errors |
-| [view-models.md](references/view-models.md) | Loading, several resources, paging, keys, filtering, nested models, modes, tests |
-| [views.md](references/views.md) | The `XView` family, error and empty states, paging footers, modes, passing data, previews |
-| [composition.md](references/composition.md) | The app target: `<AppName>App`, environment keys, `ContentView`, `XScreen` |
-| [navigation.md](references/navigation.md) | Destinations, linking features, deep links, push or present, sheets, alerts |
-| [conventions.md](references/conventions.md) | Naming a type, file or folder |
-| [decisions.md](references/decisions.md) | Before designing; recording a pick; a dependency's warning |
-| [related-skills.md](references/related-skills.md) | Installing the related skills; where this skill wins |
+- Xcode with Swift 6.4 or later, its SDK and an iPhone simulator ([testing](references/modules.md#testing)).
+- Web access for the search ([decisions.md](references/decisions.md)).
+- The [related skills](#related-skills) `system-design`, `architecture`, `code-review`, `swift-api-design-guidelines-skill`, `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`.
 
 ## Available Scripts
 
 | Script | Purpose | Arguments |
 |---|---|---|
-| `scripts/check_boundaries.sh` | Boundaries the compiler can't check | None; from the app's repository root |
+| `scripts/xcode_ci.sh` | Builds or tests on an iPhone simulator, failing on an owned warning | `<build\|test> <scheme> [arguments…]` from the package's or app's folder |
+| `scripts/check_boundaries.sh` | Boundaries the compiler can't check | None; from the repository root |
+| `scripts/check_style.sh` | The style rules a script can see | None; from the repository root |
+
+## Limitations
+
+- Not covered: visual design, accessibility, and targets beyond the app, such as widgets and extensions; ask the user ([decisions.md](references/decisions.md#always-asked)).
+
+## References
+
+| Reference | Read when |
+|---|---|
+| [modules.md](references/modules.md) | Feature boundaries, targets, what Core may link and the package template; placing a type, the shared package, DesignSystem; strings; testing, reviews; moving an app into packages |
+| [domain.md](references/domain.md) | Models, errors, services, mocks, ports and their names; shared state; stored data; work no screen starts |
+| [networking.md](references/networking.md) | Adding an endpoint; the API client and its errors |
+| [view-models.md](references/view-models.md) | Loading, several resources, paging, keys, filtering, nested models, modes, tests |
+| [views.md](references/views.md) | The `XView` family, error and empty states, paging footers, modes, passing data, previews |
+| [composition.md](references/composition.md) | The app target: `<AppName>App`, environment keys, `ContentView`, `XScreen` |
+| [navigation.md](references/navigation.md) | Destinations, linking features, deep links, push or present, sheets, alerts |
+| [style.md](references/style.md) | Writing or reviewing any Swift outside a view's body |
+| [conventions.md](references/conventions.md) | Naming a type, file or folder |
+| [decisions.md](references/decisions.md) | Before designing; recording a pick; a dependency's warning |
+| [related-skills.md](references/related-skills.md) | Installing the related skills; where this skill wins |
+
+## Related skills
+
+[related-skills.md](references/related-skills.md): each task's skill, installing them, and where this skill wins.
 
 ## Instructions
 
@@ -160,45 +179,24 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 - [ ] Verify
 ```
 
-**Modularize an existing app**: copy the checklist in [moving an app into packages](references/modules.md#moving-an-app-into-packages).
+**Modularize an existing app**: the checklist in [moving an app into packages](references/modules.md#moving-an-app-into-packages).
 
 **Add search**: across the app → a Search tab, its own feature; through what a screen shows → [a filter](references/view-models.md#filtering-loaded-values); on the server, in one screen → a `SearchSession` [mode](references/view-models.md#modes).
-
-**Link one feature to another** (Watchlist opens sign-in)
-
-```
-- [ ] Search online (references/decisions.md)
-- [ ] Place: a `SharedDestination` case if one exists; else move another feature's XDestination case there with its mapping; else a new case in the source's XDestination (`.signIn`)
-- [ ] Source: push it with NavigationLink(value:), or present it from XView if the design shows it over the screen (references/navigation.md#presenting-a-screen)
-- [ ] Data another feature owns (Catalog asks Watchlist if a movie is kept): a port and mock in the source's XCore, with swift-api-design-guidelines-skill
-- [ ] App, for a port: an adapter over the owner's service (which gains what the port needs), built in <AppName>App.init, injected by environment key, passed by the source's XScreen
-- [ ] App, for a new case: its mapping in Destination.init(_: SourceDestination); the source's XDestination in navigationDestinations() if new
-- [ ] App, for a presented place: the source's XScreen passes DestinationView to its XView
-- [ ] Verify
-```
 
 **Verify**
 
 ```
-- [ ] Build each changed package's scheme and the app, and run their tests (references/modules.md#testing)
+- [ ] scripts/xcode_ci.sh test for each changed package, and build for the app (references/modules.md#testing)
+- [ ] scripts/check_boundaries.sh and scripts/check_style.sh, and swift format lint (references/style.md#formatting)
 - [ ] Each skill the checklist names was invoked with the Skill tool
 - [ ] Each pick is recorded with its reason and sources (references/decisions.md#recording-a-decision)
-- [ ] Fix and repeat until all pass; a dependency's warning is a departure (references/decisions.md#warnings-from-dependencies)
+- [ ] Fix and repeat until all pass; a concurrency diagnostic goes through swift-concurrency-pro, never silenced; a dependency's warning is a departure (references/decisions.md#warnings-from-dependencies)
 ```
 
-**Review an app's architecture**: `scripts/check_boundaries.sh`, then the checklist in [checking the boundaries](references/modules.md#checking-the-boundaries).
+**Link one feature to another** (Watchlist opens sign-in): the checklist in [linking two features](references/navigation.md#linking-two-features).
 
-**Decide where a type belongs**
+**Review an app**: the checklist in [checking the boundaries](references/modules.md#checking-the-boundaries).
 
-1. Used by one feature, from any of its screens → that feature: XCore for models and contracts, XUI for anything visual or localized, the source's adapter target for mapping.
-2. Needed by a second feature, both changing together → Shared for a model, SharedUI for a view, SharedTMDB for a mapping to a Shared model or a client step both call.
-3. Only looks alike → duplicate it.
-4. Visual and domain-free → DesignSystem; talks to the API → Networking; wires features together → the app.
+**Add work no screen starts**: the checklist in [lifetime services](references/domain.md#lifetime-services).
 
-## Limitations
-
-- Not covered: visual design, accessibility, and targets beyond the app, such as widgets and extensions; ask the user ([decisions.md](references/decisions.md#always-asked)).
-
-## Related skills
-
-[related-skills.md](references/related-skills.md): each task's skill, installing them, and where this skill wins.
+**Decide where a type belongs**: the steps in [placing a type](references/modules.md#placing-a-type).

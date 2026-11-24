@@ -36,13 +36,13 @@ MAX_TAGS = 5
 # The headings SkillEvaluator's quality check looks for that SKILL.md's sections fit.
 SKILL_SECTIONS = [
     "## Purpose",
-    "## Prerequisites",
     "## Examples",
-    "## Common Issues",
-    "## References",
+    "## Troubleshooting",
+    "## Prerequisites",
     "## Available Scripts",
-    "## Instructions",
     "## Limitations",
+    "## References",
+    "## Instructions",
 ]
 
 failures: list[str] = []
@@ -375,7 +375,26 @@ REPLACED_APIS = {
 }
 
 
+def logical_lines(lines: list[tuple[int, str]]) -> list[tuple[int, str]]:
+    """Joins a call's wrapped arguments, so each argument is checked where it sits."""
+    joined: list[tuple[int, str]] = []
+    last_number = 0
+    for number, line in lines:
+        code = re.sub(r"//.*", "", re.sub(r'"(?:[^"\\]|\\.)*"', '""', line)).strip()
+        previous = joined[-1][1] if joined else ""
+        wrapped = previous.endswith(("(", ",")) or code.startswith(")")
+        if number == last_number + 1 and joined and wrapped:
+            separator = "" if previous.endswith("(") or code.startswith(")") else " "
+            joined[-1] = (joined[-1][0], previous + separator + code)
+        else:
+            joined.append((number, code))
+        last_number = number
+    return joined
+
+
 def check_swift_examples() -> None:
+    effect = re.compile(r"(\(|\w: |, )(try|await) ")
+    declaration = re.compile(r"^\s*(var \w+\b.*|let \w+: [^=]+)$")
     # A modifier matches after any receiver; a type or attribute matches with or without its module.
     replaced = {
         api: re.compile(("" if api.startswith(".") else r"(?<![\w@])") + re.escape(api) + r"\b")
@@ -397,6 +416,13 @@ def check_swift_examples() -> None:
                 following = following.strip() if following_number == number + 1 else ""
                 if not following or following.startswith("}") or re.match(r"//(?!/)", following):
                     fail(f"{where}: a /// comment documents the declaration below it; label a group with //")
+            if declaration.match(line):
+                following = [text.strip() for _, text in lines[position + 1 : position + 4]]
+                if any(text.startswith("do {") for text in following):
+                    fail(f"{where}: declared before a do for its catches to fill; end each path in its own catch")
+        for number, code in logical_lines(lines):
+            if effect.search(code):
+                fail(f"{relative(path)}:{number}: a try or await inside an argument; build the value in a let first")
 
 
 # MARK: - Plugin

@@ -3,12 +3,13 @@
 ## Contents
 - Naming
 - Folders
+- Files
 
 ## Naming
 
 `X` is a feature's name in UpperCamelCase (`Catalog`), or one of its screens' (`MovieCast`); `x` is lowerCamelCase. A screen uses its noun in every slot (`MovieCastService`, `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`), and what spans the feature uses the feature's name (`CatalogDestination`, `CatalogError`). Which name a screen, model or shared view takes inside a feature is in `modules.md#inside-a-feature`.
 
-Names follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/), applied with `swift-api-design-guidelines-skill` (`related-skills.md`). This table holds the names the skill's shapes take, which win where the two differ.
+Names follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/), applied with `swift-api-design-guidelines-skill` (`related-skills.md`), with an initialism in one case (`movieID`, `posterURL`, `CatalogTMDB`). This table holds the names the skill's shapes take, which win where the two differ.
 
 | Kind | Name | Example |
 |---|---|---|
@@ -21,6 +22,7 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | A name an imported module declares | a qualifier from the domain | `MovieCollection`, not `Collection` |
 | Feature error | `XError`; one per screen when their failures differ | `CatalogError.notFound`, `GenreDetailError` |
 | Service protocol (XCore) | `XService`, one per screen; another for each concern with a source of its own; never a `…Repository`, `…UseCase` or `…Manager` | `DiscoverService`, `MovieCastService`, `RecentSearchesService` |
+| Lifetime service (XCore) | the feature's name + the work it keeps doing + `Service`, with one `run()` | `WatchlistSyncService` |
 | Service implementation (adapter target) | its source + the protocol's name: the API, the store the user picked or a provider | `TMDBDiscoverService` |
 | Mock (XCore) | `Mock` + the protocol's name, exposed as `.mock`, and `.mock(_:)` for a scenario | `MockDiscoverService`, `.mock(.failure(.offline))` |
 | Consumer-owned port, and its app adapter | named for the consumer's need; an adapter is the protocol's name with `Adapter` for `Service` | `WatchlistMembershipService`, `WatchlistMembershipAdapter` |
@@ -61,4 +63,7 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | Networking | the client, its error, and the API's types |
 | App | `App/`, `Adapters/`, `Extensions/Environment/`, `Navigation/`, `Screens/` |
 
-One type per file, named after the type; a nested model's file adds it to its view model's name (`MovieDetailViewModel+WatchlistMembership.swift`). Small private helper views may share their parent's file.
+## Files
+
+- One type per file, named after the type. A nested model's file adds it to its view model's name (`MovieDetailViewModel+WatchlistMembership.swift`), and a small private helper view may share its parent's file.
+- An extension that adds a concern to a type is `Type+Concern.swift`, as the table's mappings, display mappings and environment keys are.
