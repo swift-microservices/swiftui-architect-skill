@@ -1,4 +1,8 @@
 # Reviewed SkillSpector false positives, applied with --skillspector-baseline.
 # SkillSpector matches keywords, so each rule waives one phrase in one file.
 version: 2
-rules: []
+rules:
+  - id: "SQP-3"
+    path: "references/navigation.md"
+    message: "*No genuine issue identified*"
+    reason: "The LLM stage reported its language-policy check of this English prose as a finding while stating it found no issue; the file forces no language or locale."
