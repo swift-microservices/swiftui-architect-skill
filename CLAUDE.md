@@ -7,7 +7,8 @@ Every change reaches `main` through a pull request and ends with [the checks](#a
 ## What the skill is for
 
 - It decides where code lives, who owns it, and the shape of the pieces that hold a modular SwiftUI app together: modules and their dependency direction, domain models and errors, services and the networking client, view models, the views a screen is made of, app composition, navigation and naming.
-- It states shapes and rules. How to write the code inside a shape (view bodies, modifiers and the view each attaches to, layout, API availability, redraw performance, isolation, task groups, how a load guards against stale results, test code, SwiftData models and fetches) belongs to `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`, listed under Related skills in `SKILL.md`.
+- It states shapes, rules and the process an agent follows to fill them. The design before a shape belongs to `system-design` and `architecture`, and how to write the code inside one (view bodies, modifiers and the view each attaches to, layout, API availability, redraw performance, isolation, task groups, how a load guards against stale results, test code and its stubs, SwiftData models and fetches) to `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`, all listed in `references/related-skills.md`.
+- Which API, library, protocol, endpoint, store or provider fills a shape belongs to the related skills, or to what the agent's online search finds for that app at that time. A sentence that's true only for some apps, or names a technology as the answer, becomes a question the agent asks the user or a search it runs, as `references/decisions.md` sets out.
 - Out of scope: visual design, accessibility, and anything that belongs to one app built with the skill.
 
 ## Skill best practices
@@ -31,7 +32,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
 **Structure**
 
 - The skill folder holds only what agents read and run: `SKILL.md`, `references/`, `scripts/` for deterministic checks, and `agents/openai.yaml`, Codex's display name for the skill. Everything for people, such as `README.md`, this file, `.github/` and the license, stays outside it.
-- `SKILL.md` is the entry point and holds only what every task needs, the most important first, since compaction keeps the start. It stays under 500 lines and 5,000 tokens, with its References table inside the first 5,000, and a change that adds to it cuts as much elsewhere. Its sections are: purpose, prerequisites (the toolchain and tools the shapes need), examples (the example app), the shape, dependency direction, who owns what, principles, the shapes in brief, common issues, references, available scripts (a table of `| Script | Purpose | Arguments |`), instructions (the workflows), limitations (what the skill leaves out) and related skills. A section that fits a heading SkillEvaluator's quality check looks for takes that heading.
+- `SKILL.md` is the entry point and holds only what every task needs, the most important first, since compaction keeps the start. It stays under 500 lines and 5,000 tokens, with its References table inside the first 5,000, and a change that adds to it cuts as much elsewhere. Its sections are: purpose, prerequisites (the toolchain and tools the shapes need), examples (the example app), the shape, dependency direction, who owns what, principles, the shapes in brief, common issues, references, available scripts (a table of `| Script | Purpose | Arguments |`), instructions (the workflows and Verify), limitations (what the skill leaves out) and related skills (a pointer to `references/related-skills.md`). A section that fits a heading SkillEvaluator's quality check looks for takes that heading.
 - Its common issues are mistakes any task can make, in modules, naming, composition or navigation, each one an agent actually makes. A mistake only one shape invites, such as in paging or a keyed load, is stated once, in that shape's reference.
 - A workflow is a checklist the agent copies into its response, ending in a build or test it repeats until it passes. A checklist for a task an app needs once, such as moving it into packages or a review, lives in the reference it follows, with a one-line pointer under Instructions in `SKILL.md`.
 - A script in `scripts/` is run, never read: `SKILL.md`'s Available Scripts gives its arguments and where it runs, and only its output enters the context. It runs on macOS's bash 3.2 and on Linux, BusyBox's tools included, takes no interactive input, prints each failure under the rule it breaks and exits non-zero on any. It checks what a rule's home states, and states no rule of its own.
@@ -48,7 +49,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
 - One home per rule. A rule lives in one reference; `SKILL.md` carries at most one line for it (a principle, a brief, a common issue or a workflow step); other references point to it instead of restating it, and `conventions.md` holds only the names it uses. A rule stated twice drifts apart and costs tokens twice.
 - One home per example, too: code shown in one reference is linked from the others, not repeated.
 - Concrete examples, and one default rather than a menu of options.
-- Related skills lists each skill that covers the code inside a shape, one line each: what it covers, the `name` in that skill's frontmatter, and a link to its source. Prerequisites names the same skills, so an agent asks the user to install a missing one, and `README.md`'s Works well with links the same sources. They are Paul Hudson's SwiftUI Pro, Swift Concurrency Pro, Swift Testing Pro and SwiftData Pro, one author's skills that agree with each other, chosen for current APIs and a small `SKILL.md`. Where their examples differ from this skill, this skill's shapes and rules win, and the overlap is never restated here.
+- `references/related-skills.md` lists each related skill, one line each: what it covers, the `name` in that skill's frontmatter, and a link to its source; `SKILL.md`'s Related skills is a pointer to it, and a checklist that covers a skill's task names it at the line that invokes it. Prerequisites names the same skills, and `README.md`'s Works well with links the same sources. `SKILL.md`'s Instructions stop the task before the first checklist until every missing one is installed with the reference's commands, have the agent invoke each with the Skill tool at the line that names it, and Verify checks that it did. The design skills are Anthropic's System Design and Architecture, stack-agnostic and from an established maintainer; the code skills are Paul Hudson's SwiftUI Pro, Swift Concurrency Pro, Swift Testing Pro and SwiftData Pro, one author's skills that agree with each other, chosen for current APIs and a small `SKILL.md`. Where one differs from this skill, this skill's shapes and rules win, and the overlap is never restated here.
 
 ## What a change must respect
 
@@ -75,6 +76,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
   - A public type that another module builds shows its public init, elided.
   - Lines stay within 100 columns: a long signature or call takes one argument per line, and a closure that doesn't fit names its parameter and takes its own lines.
 - Native SwiftUI and Apple's frameworks only: no navigation libraries, DI containers or invented infrastructure.
+- No API, library, protocol, endpoint, store, provider or data format is named as the answer. Where an app needs one, the skill sends the agent to the related skills, the search or the user (`references/decisions.md`).
 - No invented states: an empty answer is never an error, and a screen shows only the states its design has.
 - Testing guidance names the tests a bug would break, never a test for what every instance of a shape repeats.
 - Describe the current design only, with no dates, old names, renames, migrations or history.
@@ -85,7 +87,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
 ## Making a change
 
 1. Work on a branch, never on `main`. From `main`, start one from the latest: `git fetch origin && git switch -c <branch> origin/main`.
-2. Decide whether it belongs: architecture, ownership or a shape goes in; technique goes to the related skills; one app's detail stays out.
+2. Decide whether it belongs: architecture, ownership, a shape or the process goes in; technique goes to the related skills; an implementation choice becomes a question or a search step; one app's detail stays out. When it isn't clear which, ask.
 3. Find every place the rule or name appears: `grep -rn "<term>" README.md CLAUDE.md .claude-plugin .codex-plugin .agents .github skills`.
 4. Edit the rule's home first, then its line in `SKILL.md`, then `conventions.md`, then `README.md` when what the skill covers changes. Keep the descriptions in `SKILL.md`, `.claude-plugin/plugin.json`, the plugin entry in `.claude-plugin/marketplace.json` and `.codex-plugin/plugin.json` identical.
 5. Run [the checks](#after-every-change).
@@ -99,7 +101,7 @@ A new reference file gets a lowercase topic name, a Contents list once it passes
    - `SKILL.md`'s sections, lines and estimated tokens, at 2.9 characters a token, as Claude's tokenizer measures this skill, and that its References table ends inside the first 5,000
    - that every reference is in `SKILL.md`'s References table and `README.md`'s layout, with a Contents list past 100 lines
    - that every script is in `SKILL.md`'s Available Scripts table and `README.md`'s layout, and that every script the skill names exists
-   - that Prerequisites names, and `README.md`'s Works well with links, exactly the skills Related skills lists
+   - that Prerequisites names, and `README.md`'s Works well with links, exactly the skills `references/related-skills.md` lists, and that Related skills links it
    - that every `npx`, `bunx` or `uvx` command in the skill, `README.md` and this file pins a version
    - every relative link and heading anchor in `README.md`, this file and the skill, every pointer in the references and in `SKILL.md`'s checklists, and that no reference links to another
    - that the descriptions and the four versions in `SKILL.md` and the Claude Code and Codex manifests agree, and that the Codex marketplace lists the plugin
@@ -114,12 +116,13 @@ A new reference file gets a lowercase topic name, a Contents list once it passes
    ```
 
    Its security scan matches keywords. A reviewed false positive is waived in `.github/skillspector-baseline.yaml`, one rule per phrase per file, each with a `reason`; anything else is fixed. What remains is advisory and has no fix in the skill: Hermes leaves `agents/openai.yaml` out of its file list, where Codex needs it, Copilot CLI and OpenCode reload skills only on restart, and the quality check asks a skill with scripts for the `run_script` call of a harness this skill doesn't ship for.
-3. SkillEvaluator's Tier 2 passes, with no cluster judged `DUPLICATE`: a rule repeated within the skill moves to its one home. It embeds the skill through NVIDIA's API, so it needs the key. To compare the skill with the related skills, check each out, copy each skill's own folder into one directory without symlinks, which the tool refuses, build a catalog from it and pass it with `--catalog`; content the skill shares with one is technique, which stays in the related skill:
+3. SkillEvaluator's Tier 2 passes, with no cluster judged `DUPLICATE`: a rule repeated within the skill moves to its one home. It embeds the skill through NVIDIA's API with `nvidia/nemotron-3.5-embed-1b`, so it needs the key. NVIDIA's content screen refuses some harmless text, such as any `metadata:`, so Tier 2 runs through `.github/scripts/skillevaluator_tier2.py`, which embeds a refused chunk piece by piece and prints each one it approximated. To compare the skill with the related skills, check each out, copy each skill's own folder into one directory without symlinks, which the tool refuses, build a catalog from it and pass it with `--catalog`; content the skill shares with one is technique, which stays in the related skill:
 
    ```
-   export SKILL_EVAL_EMBEDDING_PROVIDER=nv_build NVIDIA_API_KEY=<key>
-   skillevaluator tier2 similarity-check <related skills folder> --type skill --full-body --save-catalog <folder outside the repo>/related-skills.json
-   skillevaluator tier2 skills/swiftui-architect --catalog <folder outside the repo>/related-skills.json --full-body -o <folder outside the repo>
+   export SKILL_EVAL_EMBEDDING_PROVIDER=nv_build SKILL_EVAL_EMBEDDING_MODEL=nvidia/nemotron-3.5-embed-1b NVIDIA_API_KEY=<key>
+   tier2="$(uv tool dir)/skillevaluator/bin/python -I .github/scripts/skillevaluator_tier2.py tier2"
+   $tier2 similarity-check <related skills folder> --type skill --full-body --save-catalog <folder outside the repo>/related-skills.json
+   $tier2 skills/swiftui-architect --catalog <folder outside the repo>/related-skills.json --full-body -o <folder outside the repo>
    ```
 4. A new or changed code shape type-checks in a scratch package with the `Package.swift` template's settings, built with `xcodebuild` for an iOS Simulator against the current SDK.
 5. A new or changed script passes `shellcheck` and `/bin/bash -n`, and runs from the root of a sample app that passes and of one that breaks each rule it checks, built in a scratch folder, with the same output on macOS and in a Linux container.
@@ -132,6 +135,7 @@ A new reference file gets a lowercase topic name, a Contents list once it passes
    - [ ] Terms are conventions.md's, and grep finds no stale name or rule, no history, and no name from an app the skill is used on
    - [ ] README.md still describes what the skill covers
    - [ ] Nothing states UI technique the related skills own, such as a modifier's placement or an API's availability
+   - [ ] No sentence holds only for some apps or names a technology as the answer; each such choice is a question or a search step
    ```
 
 7. When the change alters what an agent produces, compare it with the branch's base:

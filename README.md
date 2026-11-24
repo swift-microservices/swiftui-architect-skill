@@ -10,7 +10,7 @@ Ask for a feature, a screen, a link between two features, a move into packages o
 ## The architecture
 
 - **A package per capability.** Each feature owns every screen of its capability and the data behind them. Features never import each other; they meet only in the app, which links their screens and connects their data through small ports.
-- **Boundaries the compiler enforces.** A feature splits into `Core` for its domain, `UI` for view models and views, and `Live` for services over the API. `Core` imports neither SwiftUI nor the networking client, and generated API types never leave the `Live` targets, so a crossing fails the build.
+- **Boundaries the compiler enforces.** A feature splits into `Core` for its domain, `UI` for view models and views, and `Live` for services over the API. `Core` imports neither SwiftUI nor the networking client, and the API's and the store's types never leave the `Live` targets, so a crossing fails the build.
 - **A domain shaped for screens.** Models describe what the app shows, not what the API sends, and each feature has errors cased by what its screens tell apart.
 - **Predictable view models.** Data, loading and error for each resource, with the same shapes for paging, keyed loads, search and nested models, and the tests a bug would break.
 - **Native navigation across modules.** Features say where their views go, and the app decides which screen each place shows. It's all `NavigationStack`, `NavigationLink(value:)` and sheets: no routers inside features, no coordinators, no navigation libraries.
@@ -65,7 +65,7 @@ The agent loads the skill when a task matches it, even when the request doesn't 
 - "Let the search results open sign-in."
 - "Review this app's architecture."
 
-To add a feature or a screen, link two features, move an app into packages or review one, the agent follows the skill's checklist, and one that changes code ends with a build and a test run repeated until both pass.
+To add a feature or a screen, link two features, move an app into packages or review one, the agent follows the skill's checklist. Before designing anything new it searches online for how it's usually done, and a checklist that changes code ends with a build and a test run repeated until both pass.
 
 An app built another way keeps its structure until you ask to change it; then the skill moves it into packages one buildable step at a time.
 
@@ -77,25 +77,26 @@ The shapes use Swift 6 language mode and the SDK in Xcode 27 or later (Swift too
 |---|---|
 | Modules | What a feature is and where its boundary goes, `Package.swift`, the shared package and DesignSystem, strings and assets, building and testing, boundary checks, moving an app into packages |
 | Domain | Models, errors, service protocols, live services, mocks, ports between features, and data stored on the device |
-| Networking | The API package, its generated client, and how its errors reach a screen |
+| Networking | The API package, its client, and how its errors reach a screen |
 | View models | Loading, several resources, paging, keyed loads, filtering and search, nested models, tests |
 | Views | The views a screen is made of, its error and empty states, paging footers, previews |
 | Composition | The app target: services, environment keys, tabs, and the screens it composes |
 | Navigation | Destinations, the router, links between features, deep links, sheets, covers and alerts |
 | Naming | Packages, targets, types, files and folders |
 
-It builds on SwiftUI, Observation, SwiftData, Swift Package Manager and, for an API with an OpenAPI document, [Swift OpenAPI Generator](https://github.com/apple/swift-openapi-generator).
+It builds on SwiftUI, Observation and Swift Package Manager. Which API client, store or sign-in an app uses isn't the skill's call: the agent searches for the established approach, asks you about persistence and authentication, and records each pick where your app keeps its decisions.
 
 Not covered: visual design, accessibility, and the code inside each shape, which the skills below handle.
 
 ### Works well with
 
-The skill decides the shapes; these skills cover the code inside them. The agent loads each when its task comes up, such as the testing skill before writing tests, and asks you to install one that's missing:
+The skill decides the shapes; these skills cover the design before them and the code inside them. The agent invokes each where a checklist calls for it, such as the system design skill before a new feature and the testing skill before writing tests, and stops at the start of a task until you install any that are missing. Where one's advice differs, the skill's shapes win.
 
+- [System Design and Architecture](https://github.com/anthropics/knowledge-work-plugins), from Anthropic's Engineering plugin: a feature's requirements and trade-offs, and decision records for the choices the skill leaves open
 - [SwiftUI Pro](https://github.com/twostraws/SwiftUI-Agent-Skill): view bodies, modifiers, layout, data flow, localization, performance
 - [Swift Concurrency Pro](https://github.com/twostraws/Swift-Concurrency-Agent-Skill): loads, cancellation, actors, `Sendable` and strict-concurrency diagnostics
 - [Swift Testing Pro](https://github.com/twostraws/Swift-Testing-Agent-Skill): view model and mapping tests
-- [SwiftData Pro](https://github.com/twostraws/SwiftData-Agent-Skill): models, predicates and fetches for data kept on the device
+- [SwiftData Pro](https://github.com/twostraws/SwiftData-Agent-Skill): models, predicates and fetches, when you pick SwiftData for data kept on the device
 
 ## Repository layout
 
@@ -114,7 +115,9 @@ skills/swiftui-architect/
 │   ├── views.md             the views a screen is made of, and its states
 │   ├── composition.md       the app target: services, environment keys, screens
 │   ├── navigation.md        destinations, the router, linking features, sheets and alerts
-│   └── conventions.md       names and folders
+│   ├── conventions.md       names and folders
+│   ├── decisions.md         the search before a design, what's always asked, recording picks
+│   └── related-skills.md    the skills for design and technique, and installing them
 └── scripts/                 run, not read
     └── check_boundaries.sh  the boundary checks a review runs from the app's root
 .github/                     validation, the semver label check, releases

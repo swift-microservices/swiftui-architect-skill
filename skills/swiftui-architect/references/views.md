@@ -1,6 +1,6 @@
 # Views
 
-A screen is a small family of views in its feature's XUI target: `XView`, the public entry point, renders `XPhaseView`, which picks what to show from where the screen's loads stand, and `XContentView` lays the content out. Keep them plain, native SwiftUI: a view model in, views out, `NavigationLink(value:)` for navigation. SwiftUI technique inside these shapes is `swiftui-pro`'s subject ([related skills](../SKILL.md#related-skills)).
+A screen is a small family of views in its feature's XUI target: `XView`, the public entry point, renders `XPhaseView`, which picks what to show from where the screen's loads stand, and `XContentView` lays the content out. Keep them plain, native SwiftUI: a view model in, views out, `NavigationLink(value:)` for navigation. SwiftUI technique inside these shapes is `swiftui-pro`'s subject (`related-skills.md`).
 
 ## Contents
 - File roles
@@ -22,7 +22,7 @@ A screen is a small family of views in its feature's XUI target: `XView`, the pu
 | `Components/Cards/`, `Components/Rails/`, … | Views several of the feature's screens show, named for what they are (`modules.md#inside-a-feature`) |
 | `X…NextPageFooter` | Loads the next page of a paged resource while it's on screen, offers a retry when that fails, and draws nothing after the last page |
 | `XToolbar` | A `ToolbarContent` struct |
-| `Model+Title.swift` | Display mappings from XCore values to `LocalizedStringResource`, never `Text` or `Image` (`Department+Title.swift`) |
+| `Model+Title.swift` | Display mappings from XCore values to localized text, never to views (`Department+Title.swift`) |
 
 Where each file goes: `conventions.md#folders`. A feature exports one public view per screen (`MovieDetailView`, `MovieCastView`) and its view models; everything else is internal. One type per file.
 
@@ -100,7 +100,7 @@ struct DiscoverContentView: View {
 }
 ```
 
-- `XView` never decides between states: no `if`, `switch` or overlay in its body picks what shows, which is `XPhaseView`'s job. It starts the screen's loads with `.task`, and `.task(id:)` for a keyed resource (`view-models.md#keyed-resources`). `.refreshable` calls `refresh()` on a screen with a paged list, and `load()` on any other. Never start loads on the progress view: it goes away when the first data arrives, and cancelling its task cancels the loads still running.
+- `XView` never decides between states: no `if`, `switch` or overlay in its body picks what shows, which is `XPhaseView`'s job. It starts the screen's loads with `.task`, and `.task(id:)` for a keyed resource (`view-models.md#keyed-resources`). `.refreshable` calls `refresh()` on a screen with a paged list, and `load()` on any other.
 - What every state shares goes on `XView`, such as a control over the results, so it stays up while the screen loads, fails or shows content.
 - `XPhaseView` checks in a fixed order: the content whenever there is data, the error only when there's nothing to show, progress while the load runs, then the empty state where the design has one. It follows the resource the content can't do without and passes the others along.
 - A screen that loads nothing, such as a form, has no `XPhaseView`: `XView` renders `XContentView`.
@@ -201,7 +201,7 @@ Every public view has a preview built on mocks, so the feature is its own demo:
 }
 ```
 
-A view below `XView` reads a view model from the environment and crashes at runtime without one, so its preview injects the view model `XView` would have:
+A view below `XView` reads a view model from the environment, so its preview injects the view model `XView` would have:
 
 ```swift
 #Preview {

@@ -17,8 +17,7 @@ XCore holds a feature's domain: the models its screens show, the errors they can
 A domain model describes what the app shows, not what the API sends. The API's shape (optional everything, snake_case fields, image paths, date strings, envelopes, pagination metadata) stops at the Live targets.
 
 ```swift
-// What TMDB sends, generated in Networking: optional fields, a date as text, an image as a path.
-// Components.Schemas.MovieDetails(id:title:releaseDate:voteAverage:posterPath:genres:)
+// What TMDB sends, as Networking's types: optional fields, a date as text, an image as a path.
 
 // What the Catalog feature shows, in CatalogCore:
 public struct Movie: Identifiable, Equatable, Sendable {
@@ -33,7 +32,7 @@ public struct Movie: Identifiable, Equatable, Sendable {
 }
 ```
 
-- **Value types, `Equatable` and `Sendable`.** They cross from live services to the main actor, and an `@Observable` view model only skips redrawing for an equal value when it can compare them. `Identifiable` when a list shows them or a screen links to them.
+- **Value types, `Equatable` and `Sendable`.** They cross from live services to the main actor. `Identifiable` when a list shows them or a screen links to them.
 - **`Identifiable` names the id's type.** Store `public let id: Int`, or whatever the id really is, and refer to it as the model's `ID`, with no `typealias ID`. A whole thing and its summary share one id, and signatures name the summary's, which lists and destinations carry: `movie(id: MovieSummary.ID) -> Movie`.
 - **The whole thing is a plain noun; what a list shows of it adds `Summary`**: `Movie` and `MovieSummary`. A summary links to its whole thing by id. A model name never ends in `Detail`, which only screens use, or in a transport word (`DTO`, `Response`).
 - **A model is complete for its role.** When reusing a model would leave fields empty or filled with placeholders, that role gets its own type. The whole thing leaves out what loads separately, such as a paged list (`view-models.md#a-thing-and-its-paged-list`).
@@ -87,7 +86,7 @@ public protocol MovieDetailService: Sendable {
 
 ## Naming services and their methods
 
-Names follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) and Apple's own async APIs. The networking client keeps the spec's operation names; these rules start at the domain.
+Names follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) and Apple's own async APIs. The networking client keeps the API's operation names; these rules start at the domain.
 
 | Kind | Rule | Examples |
 |---|---|---|
@@ -113,7 +112,6 @@ public struct TMDBMovieDetailService: MovieDetailService {
         self.client = client
     }
 
-    @concurrent
     public func movie(id: MovieSummary.ID) async throws -> Movie {
         do {
             let response = try await client.movieDetails(id: id)
@@ -130,34 +128,19 @@ public struct TMDBMovieDetailService: MovieDetailService {
 }
 ```
 
-- A struct's methods are `@concurrent`, so requests and mapping run off the main actor. An actor's methods stay isolated to it, which already keeps them off the main actor; `@concurrent` would cut them off from its state. Protocol requirements and mocks stay unannotated.
-- Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer: a list item missing a required field is dropped, and a whole response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in SharedLive (`modules.md#shared-sharedui-and-sharedlive`).
-- The feature's error maps from the client's error in an initializer, such as a 404 to `.notFound`. `CancellationError` passes through untouched (`networking.md#errors-and-cancellation`).
+- Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer, and a response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in SharedLive (`modules.md#shared-sharedui-and-sharedlive`).
+- The feature's error maps from the client's error in an initializer, and `CancellationError` passes through untouched (`networking.md#errors-and-cancellation`).
 - A client step that two of a feature's live services share, such as reading extra artwork, is an internal extension on the client in XLive.
 - A client step that several features share, such as discovering movies by genre for Discover and for Search's filter, is a public extension in SharedLive's `Services/` (`TMDBClient+DiscoverMovies.swift`). It takes Shared values, returns a Shared model, and throws the client's error for each feature to map to its own.
 
 ## Data stored on the device
 
-Data the app keeps on the device, such as Search's recent searches, sits behind an XCore service protocol, with a mock, like data from the API, so views and view models never know where it's kept. SwiftData is the store, and its types stay in the Live targets the way generated API types do. How its schema, queries and migrations are written is `swiftdata-pro`'s subject ([related skills](../SKILL.md#related-skills)):
+Data the app keeps on the device, such as Search's recent searches, sits behind an XCore service protocol, with a mock, like data from the API, so views and view models never know where it's kept. Which store keeps it is the user's answer (`decisions.md#always-asked`), and the store's types stay in the Live targets the way the API's types do.
 
-```swift
-// SearchLive/Storage/StoredRecentSearch.swift: what the store keeps, mapped to RecentSearch.
-@Model
-public final class StoredRecentSearch { … }
-
-// SearchLive/Services/SwiftDataRecentSearchesService.swift
-@ModelActor
-public actor SwiftDataRecentSearchesService: RecentSearchesService {
-    public func recentSearches() async throws -> [RecentSearch] { … }
-
-    public func addRecentSearch(query: String) async throws { … }
-}
-```
-
-- Stored models live in XLive's `Storage/` and map to the domain like responses do (`RecentSearch+SwiftData.swift`). Only a stored model's type is public, so the app can list it in its container. What only the store needs, such as the date that orders the list, stays in the stored model.
-- The live service is a `@ModelActor` actor over the app's container. It returns domain values, and throws the feature's `unavailable` when the store fails.
-- No `@Query`, `modelContext` or `.modelContainer` in XUI: the view model loads stored data like any resource, and loads it again after changing it through the service.
-- `<AppName>App.init` builds one `ModelContainer` beside the client, for every Live target's stored models (`ModelContainer(for: StoredRecentSearch.self, …)`), and passes it to each live service that keeps data.
+- Stored models live in XLive's `Storage/`, named for the domain model they map to (`StoredRecentSearch`), and map to the domain like responses do. What only the store needs, such as the date that orders the list, stays in the stored model.
+- The live service is named for its store, returns domain values, and throws the feature's `unavailable` when the store fails.
+- XUI never reads the store, not even through view APIs the store provides: the view model loads stored data like any resource, and loads it again after changing it through the service.
+- `<AppName>App.init` opens the store once, beside the client, and passes it to each live service that keeps data. A stored model is public only when the app needs it to open the store.
 
 ## Mocks
 

@@ -6,10 +6,10 @@ Run from anywhere after every change to the skill, and fix until it passes:
     python3 .github/scripts/check_skill.py
 
 It checks what a script can: the frontmatter, SKILL.md's size and sections, the references
-and their Contents lists, the scripts and where they're listed, the related skills in Prerequisites and README.md, links, pointers and
-anchors, pinned package-runner commands, the plugin manifests, and the code style of every Swift
-example. It exits non-zero when any check fails. The review that needs judgment is the checklist
-in CLAUDE.md.
+and their Contents lists, the scripts and where they're listed, the related skills in
+references/related-skills.md, Prerequisites and README.md, links, pointers and anchors, pinned
+package-runner commands, the plugin manifests, and the code style of every Swift example. It
+exits non-zero when any check fails. The review that needs judgment is the checklist in CLAUDE.md.
 """
 
 import json
@@ -239,11 +239,15 @@ def section(text: str, heading: str) -> str:
 
 
 def check_related_skills(skill_text: str, readme_text: str) -> None:
-    """Checks that Prerequisites and README.md name exactly the skills Related skills lists."""
-    entry = re.compile(r"^- .*: `([\w-]+)` \(\[source\]\((https://github\.com/[^)]+)\)\)$", re.M)
-    related = entry.findall(section(skill_text, "Related skills"))
+    """Checks that Prerequisites and README.md name exactly the skills related-skills.md lists, and that
+    SKILL.md's Related skills links it."""
+    related_skills = REFERENCES / "related-skills.md"
+    listing = read(related_skills) if related_skills.exists() else ""
+    related = re.findall(r"^- .*: `([\w-]+)` \(\[source\]\((https://github\.com/[^)]+)\)\)$", listing, re.M)
     if not related:
-        fail("SKILL.md: Related skills lists each skill as `- <what it covers>: `<name>` ([source](<url>))`")
+        fail("references/related-skills.md: lists no skill as `- <what it covers>: `<name>` ([source](<url>))`")
+    if "](references/related-skills.md)" not in section(skill_text, "Related skills"):
+        fail("SKILL.md: Related skills must link references/related-skills.md")
     lines = section(skill_text, "Prerequisites").splitlines()
     line = next((line for line in lines if "(#related-skills)" in line), "")
     named = set(re.findall(r"`([\w-]+)`", line))
@@ -254,7 +258,7 @@ def check_related_skills(skill_text: str, readme_text: str) -> None:
     readme_sources = set(re.findall(r"\]\((https://github\.com/[^)]+)\)", works_well_with))
     sources = {source for _, source in related}
     if readme_sources != sources:
-        fail(f"README.md: Works well with must link the related skills {sorted(sources)}, not {sorted(readme_sources)}")
+        fail(f"README.md: Works well with must link the related skills' sources {sorted(sources)}, not {sorted(readme_sources)}")
 
 
 def check_pinned_commands() -> None:

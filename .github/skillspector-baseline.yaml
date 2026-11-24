@@ -1,8 +1,4 @@
 # Reviewed SkillSpector false positives, applied with --skillspector-baseline.
 # SkillSpector matches keywords, so each rule waives one phrase in one file.
 version: 2
-rules:
-  - id: "RA2"
-    path: "references/modules.md"
-    message: "pl[i]st"
-    reason: "Reviewed: prose saying a Swift package has no Info.plist, so DesignSystem registers its fonts itself; nothing persists across sessions."
+rules: []
