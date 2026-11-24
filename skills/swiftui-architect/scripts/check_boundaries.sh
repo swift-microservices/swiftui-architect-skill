@@ -23,16 +23,8 @@ fi
 
 # A module or type name ends where no letter, digit or underscore follows; grep's \b isn't portable.
 end='([^A-Za-z0-9_]|$)'
-failed=0
-
-# report <rule> <failures>: prints the rule and its failures, if it has any.
-report() {
-    if [ -n "$2" ]; then
-        echo "FAIL $1"
-        printf '%s\n' "$2" | sed 's/^/  /'
-        failed=1
-    fi
-}
+# shellcheck source=common.sh
+. "$(dirname "$0")/common.sh"
 
 # swift_grep <grep options> <pattern> <folders…>: greps the Swift files under the folders,
 # skipping .build, sorted by file and line. It finds the files itself, since BusyBox's grep has

@@ -210,12 +210,13 @@ def check_references(skill_text: str, readme_text: str) -> None:
 
 
 def check_scripts(skill_text: str, readme_text: str) -> None:
-    """Checks that SKILL.md's Available Scripts table and README.md's layout list every script, and
-    that every script the skill names exists."""
+    """Checks that SKILL.md's Available Scripts table lists every script an agent runs, that README.md's
+    layout names every file in scripts/, and that every script the skill names exists. A file the scripts
+    load, with no shebang, isn't run on its own, so the table leaves it out."""
     table = section(skill_text, "Available Scripts")
     for path in sorted(SCRIPTS.glob("[!.]*")):
         name = f"scripts/{path.name}"
-        if f"| `{name}` |" not in table:
+        if read(path).startswith("#!") and f"| `{name}` |" not in table:
             fail(f"{name}: not listed in SKILL.md's Available Scripts table")
         if path.name not in readme_text:
             fail(f"{name}: not named in README.md's layout")

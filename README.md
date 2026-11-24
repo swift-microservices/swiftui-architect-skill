@@ -126,7 +126,8 @@ skills/swiftui-architect/
 └── scripts/                 run, not read
     ├── xcode_ci.sh          builds or tests a scheme on a simulator, failing on an owned warning
     ├── check_boundaries.sh  the boundaries the compiler can't check
-    └── check_style.sh       the style rules a script can see
+    ├── check_style.sh       the style rules a script can see
+    └── common.sh            what the two check scripts share
 .github/                     validation, the semver label check, releases
 CLAUDE.md                    authoring rules for changing the skill
 ```

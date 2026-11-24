@@ -24,16 +24,8 @@ if [ ! -d Packages ]; then
     exit 2
 fi
 
-failed=0
-
-# report <rule> <failures>: prints the rule and its failures, if it has any.
-report() {
-    if [ -n "$2" ]; then
-        echo "FAIL $1"
-        printf '%s\n' "$2" | sed 's/^/  /'
-        failed=1
-    fi
-}
+# shellcheck source=common.sh
+. "$(dirname "$0")/common.sh"
 
 # owned_files: the app's own Swift files, one per line, leaving out tests, build products
 # and dependencies' checkouts.
