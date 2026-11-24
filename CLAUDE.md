@@ -75,7 +75,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
   - `///` documents the declaration below it; a label over a group of properties is `//`.
   - A public type that another module builds shows its public init, elided.
   - Lines stay within 100 columns: a long signature or call takes one argument per line, and a closure that doesn't fit names its parameter and takes its own lines.
-- Native SwiftUI and Apple's frameworks only: no navigation libraries, DI containers or invented infrastructure.
+- Examples use native SwiftUI navigation, the skill's default, with no navigation library, DI container or invented infrastructure.
 - No API, library, protocol, endpoint, store, provider or data format is named as the answer. Where an app needs one, the skill sends the agent to the related skills, the search or the user (`references/decisions.md`).
 - No invented states: an empty answer is never an error, and a screen shows only the states its design has.
 - Testing guidance names the tests a bug would break, never a test for what every instance of a shape repeats.

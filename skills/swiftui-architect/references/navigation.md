@@ -1,6 +1,6 @@
 # Navigation
 
-Native SwiftUI navigation only: `NavigationStack(path:)`, `NavigationLink(value:)`, `.navigationDestination(for:)`, plus local `sheet`, `fullScreenCover` and `alert`. The app owns navigation state and decides which screen each value shows; features only say where their views can go.
+Native SwiftUI navigation by default: `NavigationStack(path:)`, `NavigationLink(value:)`, `.navigationDestination(for:)`, plus local `sheet`, `fullScreenCover` and `alert`; a navigation library only when the user asks for one. The app owns navigation state and decides which screen each value shows; features only say where their views can go.
 
 ## Contents
 - The model

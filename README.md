@@ -13,8 +13,8 @@ Ask for a feature, a screen, a link between two features, a move into packages o
 - **Boundaries the compiler enforces.** A feature splits into `Core` for its domain, `UI` for view models and views, and `Live` for services over the API. `Core` imports neither SwiftUI nor the networking client, and the API's and the store's types never leave the `Live` targets, so a crossing fails the build.
 - **A domain shaped for screens.** Models describe what the app shows, not what the API sends, and each feature has errors cased by what its screens tell apart.
 - **Predictable view models.** Data, loading and error for each resource, with the same shapes for paging, keyed loads, search and nested models, and the tests a bug would break.
-- **Native navigation across modules.** Features say where their views go, and the app decides which screen each place shows. It's all `NavigationStack`, `NavigationLink(value:)` and sheets: no routers inside features, no coordinators, no navigation libraries.
-- **Modern Swift.** Swift 6 language mode with strict concurrency, `@Observable` view models on the main actor, `Sendable` services, and loads that start from SwiftUI's own `.task`.
+- **Native navigation across modules.** Features say where their views go, and the app decides which screen each place shows. By default it's `NavigationStack`, `NavigationLink(value:)` and sheets, with no routers inside features, coordinators or navigation libraries unless you ask for one.
+- **Modern Swift.** Swift 6 language mode with the upcoming features Swift is moving to, strict concurrency and strict memory safety, `@Observable` view models on the main actor, `Sendable` services, and loads that start from SwiftUI's own `.task`.
 - **Names you can predict.** Packages, targets, types, views and files follow the Swift API Design Guidelines and one naming table.
 
 The trade-off is more `Package.swift` files, some deliberate duplication before anything is shared, and an app target that does the wiring. The skill keeps that cost low with templates and clear rules about where code goes.

@@ -89,13 +89,13 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
-            Tab(.appTabDiscover, systemImage: "sparkles", value: .discover) {
+            Tab(.appTabDiscover, systemImage: …, value: .discover) {
                 DiscoverScreen()
             }
-            Tab(.appTabWatchlist, systemImage: "bookmark", value: .watchlist) {
+            Tab(.appTabWatchlist, systemImage: …, value: .watchlist) {
                 WatchlistScreen()
             }
-            Tab(.appTabSearch, systemImage: "magnifyingglass", value: .search, role: .search) {
+            Tab(.appTabSearch, systemImage: …, value: .search, role: .search) {
                 SearchScreen()
             }
         }

@@ -122,9 +122,12 @@ Where each file goes: `conventions.md#folders`.
 import PackageDescription
 
 let swiftSettings: [SwiftSetting] = [
+    .enableUpcomingFeature("ExistentialAny"),
+    .enableUpcomingFeature("MemberImportVisibility"),
+    .enableUpcomingFeature("InternalImportsByDefault"),
     .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
     .enableUpcomingFeature("InferIsolatedConformances"),
-    .enableUpcomingFeature("MemberImportVisibility"),
+    .strictMemorySafety(),
 ]
 
 let package = Package(
@@ -191,7 +194,10 @@ let package = Package(
 )
 ```
 
-- Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.4 or later, whose SDK has the APIs the shapes use. The swift settings above are what the architecture relies on.
+- Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.4 or later, whose SDK has the APIs the shapes use.
+- Every target builds in Swift 6 mode with these settings, the defaults Swift is moving to, and a package added later starts from them.
+- Imports are internal by default: a file imports a module `public` when its public declarations use the module's types, and plainly otherwise. It imports every module whose members it uses, since `MemberImportVisibility` hides the rest.
+- No package sets `.defaultIsolation(MainActor.self)`: domain types, errors and destinations cross actors, so UI types are marked `@MainActor` instead.
 
 ## Shared, SharedUI and SharedLive
 
@@ -285,6 +291,7 @@ A review copies this checklist into the response:
 - [ ] Each feature passes the boundary tests (references/modules.md#defining-features) and owns all its screens; the shared package holds nothing only one feature uses
 - [ ] Each screen: one view model, built by its XScreen, over its own service protocol and ports
 - [ ] Hand-rolled schemes where a standard or a proven approach exists (references/decisions.md#the-established-approach-first)
+- [ ] The code inside the shapes with its related skills: views with swiftui-pro, loads and live services with swift-concurrency-pro, tests with swift-testing-pro, stored data with swiftdata-pro if it's SwiftData
 - [ ] Report each finding with its file, the rule it breaks and the fix; change code only when the user asks
 ```
 

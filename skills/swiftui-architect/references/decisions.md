@@ -2,8 +2,8 @@
 
 This skill decides where code lives, who owns it and the shapes that hold it. What fills a shape, such as the API, library, store, provider, endpoint or format a feature uses, is decided outside it:
 - by the related skill that owns the technique (`related-skills.md`)
-- by an online search for the established approach
-- by the user, for what is always asked and for anything outside this skill's scope
+- by an online search for the established approach, for a technique no related skill covers, when a task needs it; this skill never lists them
+- by the user, for what is always asked, for a choice the search leaves open, and for anything outside this skill's scope
 
 Each pick is recorded where the app keeps its decisions.
 
@@ -16,6 +16,7 @@ Before designing a feature, a screen, a service, the networking client or a navi
 Then:
 - What the search finds is adopted inside this skill's shapes and principles. A scheme is never invented where a standard or a proven implementation exists.
 - Code taken from an implementation lands in the shape it belongs in and leaves its source's architecture behind.
+- When the search finds more than one established option, or leaves open a choice the user would notice, the user is asked. The agent never picks one for them.
 - Without web access, the design stops, and the user is asked to enable it or to supply the sources.
 
 ## Always asked
@@ -23,7 +24,7 @@ Then:
 - **Persistence**: whether the app keeps data, where, and whether it syncs.
 - **Authentication**: how users sign in, through what, and where their credentials are kept.
 
-Each is asked before the design that needs it, never defaulted, and never answered with a recommendation the user didn't ask for; this skill names no answer for either. Once the user answers, the search finds how that answer is built, and the shapes hold it: stored data behind a service protocol (`domain.md#data-stored-on-the-device`), a signed-in account owned by one feature and reached through ports (`domain.md#cross-feature-services-consumer-owned-ports`).
+Each is asked before the design that needs it, and this skill names no answer for either. The search for either gathers the established options to put to the user and adopts none: nothing is defaulted, picked or recommended unless the user asks for a recommendation. Once the user answers, the search finds how that answer is built, and the shapes hold it: stored data behind a service protocol (`domain.md#data-stored-on-the-device`), a signed-in account owned by one feature and reached through ports (`domain.md#cross-feature-services-consumer-owned-ports`).
 
 A requirement outside this skill's scope, such as visual design, accessibility or a target beyond the app, is a question for the user, never an invented shape.
 

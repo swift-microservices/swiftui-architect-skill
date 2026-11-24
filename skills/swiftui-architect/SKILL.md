@@ -13,7 +13,7 @@ metadata:
 
 Decides where code lives in a modular SwiftUI app, who owns it, and the shape of the pieces that hold it together: modules, domain models, services, view models, views, app composition, navigation and naming.
 
-A shape this skill states, such as a view model's state or `XView`'s `.task`, overrides other skills' patterns. What fills it, from the code to the library or store, comes from the related skills, a search and the user ([decisions.md](references/decisions.md)).
+A shape this skill states, such as a view model's state or `XView`'s `.task`, overrides other skills' patterns. What fills it, from code to library or store, comes from the related skills, a search and the user ([decisions.md](references/decisions.md)).
 
 `X` stands for a feature (`Catalog`) or a screen (`MovieCast` → `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`); a tab's root screen is named for its tab (`DiscoverView`), anything else for what it is ([inside a feature](references/modules.md#inside-a-feature)). A *screen* is one navigable page; its feature exports the view.
 
@@ -22,8 +22,8 @@ An app built another way keeps its structure and conventions until the user asks
 ## Prerequisites
 
 - Xcode with Swift 6.4 or later, whose SDK has the APIs the shapes use ([the template](references/modules.md#packageswift-template)).
-- An iOS Simulator runtime for `xcodebuild`; `swift build` and `swift test` build for the Mac ([testing](references/modules.md#testing)).
-- Web access, for the search before any design ([decisions.md](references/decisions.md)).
+- An iOS Simulator runtime: `swift build` and `swift test` build for the Mac ([testing](references/modules.md#testing)).
+- Web access for the search ([decisions.md](references/decisions.md)).
 - The [related skills](#related-skills) `system-design`, `architecture`, `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`.
 
 ## Examples
@@ -90,7 +90,7 @@ Hard rules:
 1. **Features are capabilities**, never a screen, a tab or a model other features show; each owns every screen of its capability, every tab's root screen included, and what they share ([defining features](references/modules.md#defining-features)).
 2. **Duplicate before sharing** until a second feature needs the same concept and both copies must change together.
 3. **Every module builds, previews and tests on its own**, XUI on XCore's mocks.
-4. **Native SwiftUI and Apple's frameworks only**: no navigation libraries, DI containers or wrapper views around stacks.
+4. **Native SwiftUI navigation by default**: no navigation library or wrapper views around stacks unless the user asks.
 5. **One screen per kind of content.** Things that load, page and search alike share a screen; things that differ get their own, never one screen that switches on its input.
 
 ## The shapes in brief
@@ -100,11 +100,11 @@ Hard rules:
 - **View models hold state.** `@MainActor @Observable public final class XViewModel` per screen, taking IDs and services and assigning what they return. Each resource has its data, `isLoading…` and `…Error`; a paged one adds `next…Page`, `isLoadingNext…Page` and `next…PageError`. A part only some views read, with its own input or loading, is a nested `@Observable` model, never a `…ViewModel`.
 - **Views stay plain**: no routers, navigation closures or service lookups. `XView` owns the view model as its only `@State`, puts it in the environment and starts the loads. `XPhaseView` picks what the loads' state shows, and `XContentView` lays out the values it's given.
 - **Navigation.** Views push their feature's `XDestination` cases with `NavigationLink(value:)`, or `SharedDestination` for places several features open, and take from the app only the screens they present, which are cases too.
-- **Concurrency.** Swift 6 mode: services are `Sendable`; a live service is a struct, or an actor when it holds state, as is a mock that does.
+- **Concurrency.** Services are `Sendable`; a live service is a struct, or an actor when it holds state, as is a mock that does.
 
 ## Common Issues
 
-- Register destinations only at stack roots, every type through `navigationDestinations()`: a feature screen's registration runs again when the screen appears twice in a stack, and SwiftUI reports a duplicate.
+- Register destinations only at stack roots, every type through `navigationDestinations()`: registered in a feature screen, they register again when it appears twice in a stack.
 - `XScreen` builds a view model on every `body` pass and `XView` keeps the first, so its `init` only assigns.
 - A type named like an SDK type (`Collection`, `Section`) is ambiguous where both are imported; qualify it (`MovieCollection`).
 
@@ -112,7 +112,7 @@ Hard rules:
 
 | Reference | Read when |
 |---|---|
-| [modules.md](references/modules.md) | Feature boundaries; packages and `Package.swift`; what a feature's screens share; the shared package, DesignSystem; strings and assets; building, testing, reviews; moving an app into packages |
+| [modules.md](references/modules.md) | Feature boundaries and what screens share; `Package.swift` and its settings; the shared package, DesignSystem; strings, assets; testing, reviews; moving an app into packages |
 | [domain.md](references/domain.md) | Models, errors, services, mocks, ports and their names; shared state; stored data |
 | [networking.md](references/networking.md) | Adding an endpoint; the API client and its errors |
 | [view-models.md](references/view-models.md) | Loading, several resources, paging, keys, filtering, nested models, modes, tests |
@@ -140,8 +140,8 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 - [ ] Search online and ask what's always asked (references/decisions.md); design with system-design, open choices with architecture
 - [ ] Packages/X, named for the capability: XCore, XUI, XLive, XTests (template in references/modules.md)
 - [ ] XCore: models, XError, and per screen a service protocol and mock (`.mock`)
-- [ ] Networking: a client method per endpoint
-- [ ] XLive: a live service per protocol, mapping responses to the domain and the client's error to XError
+- [ ] Networking: a client method per endpoint it calls
+- [ ] XLive, with swift-concurrency-pro: a live service per protocol, mapping responses to the domain and the client's error to XError; stored data with swiftdata-pro if it's SwiftData
 - [ ] XUI, with swiftui-pro and swift-concurrency-pro: XViewModel, XView, XPhaseView, XContentView, XDestination, Localizable.xcstrings; push places another feature already links to as `SharedDestination`
 - [ ] XTests, with swift-testing-pro: the screen's own rules and mappings (references/view-models.md#testing-view-models)
 - [ ] App: add the package to the Xcode project, linking XCore, XUI, XLive
@@ -154,8 +154,8 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 **Add a screen**
 
 ```
-- [ ] Search online (references/decisions.md), then design with system-design
-- [ ] XCore: the screen's models, service protocol and mock; Networking and XLive: its client methods and live service
+- [ ] Search online and ask what's always asked (references/decisions.md), then design with system-design
+- [ ] XCore: the screen's models, service protocol and mock; Networking and XLive, with swift-concurrency-pro: its client methods and live service
 - [ ] XUI, with swiftui-pro and swift-concurrency-pro: the screen's folder with its view model and views; an XDestination case, pushed with NavigationLink(value:)
 - [ ] XUI: a section another screen of the feature already shows moves to Components/, named for what it is
 - [ ] XTests, with swift-testing-pro: the screen's own rules, such as paging, and mappings
@@ -165,12 +165,12 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 
 **Modularize an existing app**: copy the checklist in [moving an app into packages](references/modules.md#moving-an-app-into-packages).
 
-**Add search**: across the app → a Search tab, usually its own feature. Through what a screen shows → XViewModel [filters the loaded values](references/view-models.md#filtering-loaded-values). On the server, in one screen → a `SearchSession` [mode](references/view-models.md#modes) nested in XViewModel.
+**Add search**: across the app → a Search tab, its own feature. Through what a screen shows → XViewModel [filters the loaded values](references/view-models.md#filtering-loaded-values). On the server, in one screen → a `SearchSession` [mode](references/view-models.md#modes) nested in XViewModel.
 
 **Link one feature to another** (Watchlist opens sign-in)
 
 ```
-- [ ] Search online for the flow (references/decisions.md)
+- [ ] Search online (references/decisions.md)
 - [ ] Place: a `SharedDestination` case if one exists; else move another feature's XDestination case there with its mapping; else a new case in the source's XDestination (`.signIn`)
 - [ ] Source: push it with NavigationLink(value:), or present it from XView if the design shows it over the screen (references/navigation.md#presenting-a-screen)
 - [ ] Data another feature owns (Catalog asks Watchlist if a movie is kept): a port in the source's XCore, with a mock

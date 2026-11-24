@@ -115,7 +115,7 @@ report "Destinations register only at stack roots, so a package registers them o
 )"
 
 report "No type plays a role the architecture leaves out" "$(
-    swift_grep -HnE "(class|struct|enum|actor|protocol) [A-Za-z]+(Repository|UseCase|Interactor|Manager|Coordinator)${end}" .
+    swift_grep -HnE "(class|struct|enum|actor|protocol) [A-Za-z]+(Repository|UseCase|Interactor|Manager)${end}" .
 )"
 
 others=$(package_dependencies others)

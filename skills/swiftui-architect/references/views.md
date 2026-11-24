@@ -86,7 +86,7 @@ struct DiscoverContentView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading) {
+            LazyVStack {
                 if !featured.isEmpty {
                     DiscoverFeaturedView(movies: featured)
                 }
