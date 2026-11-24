@@ -98,18 +98,34 @@ alternatives() {
     printf '%s\n' "$1" | grep -v '^$' | paste -s -d '|' -
 }
 
-# imports_of_other_adapters <adapter target's folder>: each import in the target of another adapter
-# target. A feature's adapter target may import the shared package's; the shared package's import
-# none.
+# imports_of_other_adapters: each import, in an adapter target, of another adapter target. A
+# feature's adapter target may import the shared package's; the shared package's import none.
 imports_of_other_adapters() {
-    case "$1" in
-    Packages/Shared/*) others=$adapter_names ;;
-    *) others=$feature_adapter_names ;;
-    esac
-    others=$(alternatives "$(printf '%s\n' "$others" | grep -vxF -e "${1##*/}")")
-    if [ -n "$others" ]; then
-        swift_grep -HnE "import (${others})${end}" "$1"
-    fi
+    while IFS= read -r target; do
+        [ -n "$target" ] || continue
+        case "$target" in
+        Packages/Shared/*) others=$adapter_names ;;
+        *) others=$feature_adapter_names ;;
+        esac
+        others=$(printf '%s\n' "$others" | grep -vxF -e "${target##*/}")
+        others=$(alternatives "$others")
+        if [ -n "$others" ]; then
+            swift_grep -HnE "import (${others})${end}" "$target"
+        fi
+    done <<ADAPTERS
+$adapters
+ADAPTERS
+}
+
+# adapter_imports: each module the adapter targets import, one per line.
+adapter_imports() {
+    while IFS= read -r target; do
+        if [ -n "$target" ]; then
+            imported_modules "$target"
+        fi
+    done <<ADAPTERS
+$adapters
+ADAPTERS
 }
 
 # imported_modules <folders…>: each module the Swift files under the folders import, one per line.
@@ -155,9 +171,7 @@ report "XUI and SharedUI import no Networking or adapter target" "$(
 )"
 
 report "Adapter targets never import each other" "$(
-    printf '%s\n' "$adapters" | while IFS= read -r target; do
-        [ -n "$target" ] && imports_of_other_adapters "$target"
-    done
+    imports_of_other_adapters
 )"
 
 report "Only the app's screens read services" "$(
@@ -184,9 +198,7 @@ fi
 # other adapter targets is its source's, such as a store's framework, which the compiler doesn't
 # keep out of the other targets, unless a Core, UI or Shared target needs it too.
 source_modules=$(
-    printf '%s\n' "$adapters" | while IFS= read -r target; do
-        [ -n "$target" ] && imported_modules "$target"
-    done | sort -u |
+    adapter_imports | sort -u |
         grep -vxE "Foundation|Shared|Networking|[A-Za-z]+Core${adapter_modules:+|$adapter_modules}"
 )
 if [ -n "$source_modules" ]; then

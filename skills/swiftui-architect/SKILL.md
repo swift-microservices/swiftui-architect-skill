@@ -109,7 +109,7 @@ Hard rules:
 
 | Reference | Read when |
 |---|---|
-| [modules.md](references/modules.md) | Feature boundaries, targets and `Package.swift`; the shared package, DesignSystem; strings, assets; testing, reviews; moving an app into packages |
+| [modules.md](references/modules.md) | Feature boundaries, targets and the package template; the shared package, DesignSystem; strings, assets; testing, reviews; moving an app into packages |
 | [domain.md](references/domain.md) | Models, errors, services, mocks, ports and their names; shared state; stored data |
 | [networking.md](references/networking.md) | Adding an endpoint; the API client and its errors |
 | [view-models.md](references/view-models.md) | Loading, several resources, paging, keys, filtering, nested models, modes, tests |
