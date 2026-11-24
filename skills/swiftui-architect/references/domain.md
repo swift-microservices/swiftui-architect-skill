@@ -11,6 +11,7 @@ XCore holds a feature's domain: the models its screens show, the errors they can
 - Data stored on the device
 - Mocks
 - Cross-feature services: consumer-owned ports
+- Lifetime services
 
 ## Domain models
 
@@ -61,6 +62,7 @@ public enum CatalogError: Error, Equatable {
 ```
 
 - Cases are situations a screen tells apart, not transport details. `unavailable` is the catch-all for every failure that isn't offline or not found.
+- A case carries no message: the screen's views say what each case shows (`views.md#what-a-screen-shows-without-content`).
 - An empty answer is never an error. Never add a case, or throw one, to avoid an empty state the design doesn't have.
 
 ## Service protocols
@@ -130,8 +132,8 @@ public struct TMDBMovieDetailService: MovieDetailService {
 
 - Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer, and a response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in SharedTMDB (`modules.md#shared-sharedui-and-sharedtmdb`).
 - The feature's error maps from the client's error in an initializer, and `CancellationError` passes through untouched (`networking.md#errors-and-cancellation`).
-- A client step that two of a feature's live services share, such as reading extra artwork, is an internal extension on the client in XTMDB.
-- A client step that several features share, such as discovering movies by genre for Discover and for Search's filter, is a public extension in SharedTMDB's `Services/` (`TMDBClient+DiscoverMovies.swift`). It takes Shared values, returns a Shared model, and throws the client's error for each feature to map to its own.
+- A client step that two of a feature's live services share, such as reading extra artwork, is an extension on the client in XTMDB, with internal members.
+- A client step that several features share, such as discovering movies by genre for Discover and for Search's filter, is an extension on the client in SharedTMDB's `Services/` (`TMDBClient+DiscoverMovies.swift`), with public members. It takes Shared values, returns a Shared model, and throws the client's error for each feature to map to its own.
 
 ## Data stored on the device
 
@@ -198,7 +200,8 @@ struct WatchlistMembershipAdapter: WatchlistMembershipService {
     let watchlist: any WatchlistService
 
     func addToWatchlist(_ movie: MovieSummary) async throws {
-        try await watchlist.add(WatchlistItem(movie: movie, addedAt: .now))
+        let item = WatchlistItem(movie: movie, addedAt: .now)
+        try await watchlist.add(item)
     }
     …
 }
@@ -211,3 +214,41 @@ State several features read or change, such as the watchlist or a signed-in acco
 - The owner's service carries what those ports need beside what its own screens load and change (`WatchlistService.add(_:)`).
 - The app builds each adapter over the owner's one service instance, so every feature sees the same state. The state never moves into the shared package or a singleton.
 - When another feature's state, such as whether an account is signed in, decides which of a feature's live services answers, the app implements that feature's service as an adapter that picks one per call. Neither feature learns about the other.
+
+## Lifetime services
+
+Work no screen starts, such as sending the watchlist changes made offline once the device is back online, or acting on a push, is a lifetime service: a service the app runs for as long as it's open.
+
+```swift
+// WatchlistCore
+/// Sends the watchlist changes made offline to the account once the device is back online.
+public protocol WatchlistSyncService: Sendable {
+    /// Runs for as long as the app does.
+    func run() async
+}
+
+// MoviesApp.init, after the services it takes
+Task {
+    await watchlistSyncService.run()
+}
+```
+
+- The feature whose data the work changes owns it. Its XCore declares the protocol and a mock whose `run()` returns at once, and an adapter target implements it over the source it works on (`TMDBWatchlistSyncService`).
+- When it reads a second source, such as the changes kept on the device, it takes that source's service through its XCore protocol, which the app passes in, since adapter targets never import each other.
+- `run()` neither returns nor throws while the app runs: it handles each failure itself, such as by trying again on the next change.
+- The app builds it in `<AppName>App.init` with the other services and starts it there, once, since `init` runs once for the app's lifetime. No screen reads it, so it has no environment key.
+- Screens see its effects only through their own services, when they load: it never reaches a view model, and nothing on screen observes it.
+- A push, or another event the system delivers to the app, reaches it through the app, which calls the owner's service.
+- It's never a module, layer or folder of its own (`Sync`, `Workflows`, `Jobs`, `Managers`): each piece of work belongs to the feature whose data it changes.
+
+Adding one, copy this checklist into the response:
+
+```
+- [ ] Search online and ask what's always asked (references/decisions.md), then design with system-design: what starts the work, what it changes, how it recovers
+- [ ] Owner: the feature whose data it changes (references/domain.md#lifetime-services)
+- [ ] XCore, with swift-api-design-guidelines-skill: its protocol with run(), and a mock
+- [ ] Adapter target, with swift-concurrency-pro: its live service over its source; another source's service through its XCore protocol
+- [ ] App: built in <AppName>App.init beside the services it takes, and started there; a push or other system event handed to the owner's service
+- [ ] Tests, with swift-testing-pro: its own rules, in the adapter target's test target
+- [ ] SKILL.md's Verify
+```

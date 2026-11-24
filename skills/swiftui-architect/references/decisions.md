@@ -12,11 +12,14 @@ Each pick is recorded where the app keeps its decisions.
 Before designing a feature, a screen, a service, the networking client or a navigation flow, the agent searches online for how it's already solved, in this order, and never skips the search:
 1. The standard: the platform vendor's documentation and guidelines, the language's evolution proposals, and the relevant RFC or OWASP guidance, such as the Human Interface Guidelines for a search screen or OWASP's MASVS for credentials kept on the device.
 2. Where no standard covers it, how established apps and the community solve it.
+3. An existing implementation: a maintained Swift package first, else a well-tested one in another language to port.
 
 Then:
 - What the search finds is adopted inside this skill's shapes and principles. A scheme is never invented where a standard or a proven implementation exists.
-- Code taken from an implementation lands in the shape it belongs in and leaves its source's architecture behind.
+- Code taken from an implementation lands in the shape it belongs in and leaves its source's architecture behind. It's copied or ported only under a permissive license, keeping its notice, and the original's tests become its tests.
+- A package is a dependency the user would notice: it's added only once the user agrees, in an adapter target, or in XCore only if `modules.md#what-core-may-link` allows it.
 - When the search finds more than one established option, or leaves open a choice the user would notice, the user is asked. The agent never picks one for them.
+- The design handles what most apps meet. A rare edge case gets a sentence to the user, not code.
 - Without web access, the design stops, and the user is asked to enable it or to supply the sources.
 
 ## Always asked

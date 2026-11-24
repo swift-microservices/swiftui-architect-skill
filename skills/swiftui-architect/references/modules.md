@@ -5,12 +5,14 @@ The app is built from local Swift packages: one per feature, plus the shared pac
 ## Contents
 - Defining features
 - Feature packages
+- What Core may link
 - Inside a feature
 - Folder layout
 - Package.swift template
 - Shared, SharedUI and SharedTMDB
 - DesignSystem
 - Networking and other infrastructure
+- Placing a type
 - Localization, assets and fonts
 - Testing
 - Checking the boundaries
@@ -50,7 +52,7 @@ Each feature is one package: its domain and UI, an adapter target for each sourc
 
 | Target | Contains | Imports |
 |---|---|---|
-| `XCore` | Domain models, `XError`, a service protocol and mock per screen, ports | `Shared` |
+| `XCore` | Domain models, `XError`, a service protocol and mock per screen, ports | `Shared`, and what [Core may link](#what-core-may-link) |
 | `XUI` | View models, views, `XDestination`, `Localizable.xcstrings`, display mappings | `XCore`, `Shared`, `SharedUI`, `DesignSystem` |
 | `X<Source>`, an adapter target | The live services over one source, mapping what it returns and its errors to the domain. The source is the API (`CatalogTMDB`), the store the user picked (`Search<Store>`) or a provider's SDK | `XCore`, `Shared` and its source: `Networking` and `SharedTMDB` for the API |
 
@@ -62,6 +64,16 @@ A feature declares only the adapter targets its services read: Catalog is `Catal
 - Adapter targets never import each other. The API's import the shared package's, SharedTMDB, which stands below every feature.
 - Mappings and stored models are `package`, so the package's test targets reach them and the app sees only the `public` live services. A stored model is `public` only when the app needs it to open the store, and SharedTMDB's mappings are `public`, since other packages' adapter targets use them.
 - The app links XCore, XUI and the adapter targets: it builds live services from the adapter targets and shows views from XUI (`composition.md`).
+
+## What Core may link
+
+XCore and Shared are what every other target builds on, so they link only what any target could use:
+- Foundation, and Shared for XCore
+- a library that does no I/O, has nothing to run, puts no store, transport or UI types in its API, and is stable enough for its types to appear in service protocols
+
+Everything else stays out, with no exception:
+- A store's framework, a provider's SDK, Networking and any framework that reaches the device's capabilities are sources: their types stay in their adapter targets, behind service protocols. That holds where the platform's own guidance reads a store's models from views: the stored models stay in the store's adapter target (`domain.md#data-stored-on-the-device`).
+- SwiftUI and Observation are the UI's, in XUI.
 
 ## Inside a feature
 
@@ -205,7 +217,7 @@ let package = Package(
 
 - Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.4 or later, whose SDK has the APIs the shapes use.
 - Every target builds in Swift 6 mode with these settings, the defaults Swift is moving to, and a package added later starts from them.
-- Imports are internal by default: a file imports a module `public` or `package` when its declarations of that access use the module's types, and plainly otherwise. It imports every module whose members it uses, since `MemberImportVisibility` hides the rest.
+- Access levels and imports follow `style.md#access-control-and-imports`.
 - No package sets `.defaultIsolation(MainActor.self)`: domain types, errors and destinations cross actors, so UI types are marked `@MainActor` instead.
 
 ## Shared, SharedUI and SharedTMDB
@@ -214,7 +226,7 @@ The shared package mirrors a feature's layers:
 
 | Target | Contains | Imports |
 |---|---|---|
-| `Shared` | `Domain/`: the vocabulary several features share (`MovieSummary`, `Page<Item>`) | Foundation only |
+| `Shared` | `Domain/`: the vocabulary several features share (`MovieSummary`, `Page<Item>`) | Foundation, and what [Core may link](#what-core-may-link) |
 | `SharedUI` | `Components/`: views several features show (`MovieSummaryCard`) and the shared screen states (`ContentUnavailableView.offline(retry:)`) with their copy. `Navigation/`: `SharedDestination` (`navigation.md#shareddestination-sharedui`) | `Shared`, `DesignSystem` |
 | `SharedTMDB`, the API's adapter target | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, `Page+TMDB.swift`), tested in `SharedTMDBTests`. `Services/`: a step on the client that several features' live services share (`domain.md#live-services`) | `Shared`, `Networking` |
 
@@ -256,6 +268,13 @@ It never knows a feature model, service, destination or screen, has no strings o
 
 They import no feature. What they need from one, such as who is signed in, the app passes in as a closure when it builds their clients.
 
+## Placing a type
+
+1. Used by one feature, from any of its screens → that feature: XCore for models and contracts, XUI for anything visual or localized, the source's adapter target for mapping.
+2. Needed by a second feature, both changing together → Shared for a model, SharedUI for a view, SharedTMDB for a mapping to a Shared model or a client step both call.
+3. Only looks alike → duplicate it.
+4. Visual and domain-free → DesignSystem; talks to the API → Networking; wires features together → the app.
+
 ## Localization, assets and fonts
 
 Each module owns the strings, images and colors it shows. How they're declared and read is `swiftui-pro`'s subject (`related-skills.md`).
@@ -282,27 +301,40 @@ Each feature package builds, previews and tests without the app. Each tested tar
 - A test target imports the target it tests and the modules whose types its tests name, as the template's two do, never an adapter target it doesn't test.
 - Fixtures are repeated in each test target that needs them, with no shared testing target.
 
-After every change to a feature, test its package's scheme on an iOS Simulator from the package's folder, and build the app after changing anything public:
+After every change to a feature, test its package's scheme from the package's folder, and build the app's scheme from the app's folder after changing anything public, with this skill's `scripts/xcode_ci.sh`:
 
 ```
-xcodebuild test -scheme Catalog-Package -destination 'platform=iOS Simulator,name=<an installed iPhone>'
+xcode_ci.sh test Catalog-Package
+xcode_ci.sh build MoviesApp
 ```
 
-`swift build` and `swift test` build for the Mac, where an iOS-only package's views and view models don't compile.
+- A package's scheme is `<Package>-Package` when it has several products, and its product's name when it has one.
+- The script runs `xcodebuild` on an installed iPhone simulator and fails on a warning in the repository's own code. It lists a dependency's warning under REVIEW, as a departure to record (`decisions.md#warnings-from-dependencies`).
+- `swift build` and `swift test` build for the Mac, where an iOS-only package's views and view models don't compile.
 
 ## Checking the boundaries
 
-The compiler enforces what each package declares, but not system frameworks, the app target or the roles types play. This skill's `scripts/check_boundaries.sh` checks the rest. Run it from the app's repository root, with no arguments; it prints each failure under the rule it breaks and exits non-zero on any. Under REVIEW it lists each package dependency besides the shared package, DesignSystem and Networking, which must be infrastructure, such as analytics, and each module that an adapter target and a Core, UI or Shared target both import, which must be no adapter target's source: the compiler keeps out a package it isn't given, but not a system framework such as a store's.
+The compiler enforces what each package declares, but not system frameworks, the app target or the roles types play. This skill's `scripts/check_boundaries.sh` checks the rest, and `scripts/check_style.sh` the style rules a script can see (`style.md`). Run both from the app's repository root, with no arguments; each prints a failure under the rule it breaks and exits non-zero on any.
+
+`check_boundaries.sh` lists under REVIEW:
+- each package dependency besides the shared package, DesignSystem and Networking, which must be infrastructure, such as analytics
+- each module XCore or Shared imports besides Foundation and Shared, which must be one [Core may link](#what-core-may-link)
+- each module that an adapter target and a Core, UI or Shared target both import, which must be no adapter target's source: the compiler keeps out a package it isn't given, but not a system framework such as a store's
+
+`check_style.sh` lists under REVIEW each use of unchecked concurrency, which must wrap a dependency as `style.md#concurrency` allows.
 
 A review copies this checklist into the response:
 
 ```
-- [ ] Run scripts/check_boundaries.sh from the repository root, and settle each REVIEW line
+- [ ] Run scripts/check_boundaries.sh and scripts/check_style.sh from the repository root and swift format lint (references/style.md#formatting), and settle each REVIEW line
 - [ ] Each feature passes the boundary tests (references/modules.md#defining-features) and owns all its screens; the shared package holds nothing only one feature uses
-- [ ] Each screen: one view model, built by its XScreen, over its own service protocol and ports
+- [ ] Each screen: one view model, built by its XScreen, over its own service protocol and ports; work no screen starts is its owner's lifetime service (references/domain.md#lifetime-services)
+- [ ] The code reads as references/style.md sets out: one do per path, no helpers, build then call, unchecked concurrency only where a dependency needs it
 - [ ] Hand-rolled schemes where a standard or a proven approach exists (references/decisions.md#the-established-approach-first)
 - [ ] The code inside the shapes with its related skills: names and each module's API with swift-api-design-guidelines-skill, views with swiftui-pro, loads and live services with swift-concurrency-pro, tests with swift-testing-pro, stored data with swiftdata-pro if it's SwiftData
-- [ ] Report each finding with its file, the rule it breaks and the fix; change code only when the user asks
+- [ ] Security, performance and correctness with code-review (references/related-skills.md)
+- [ ] Findings ranked blocking (the build, a boundary, a credential in source), major (shapes), minor (naming, layout, style), each with a file and line or an empty grep, the rule it breaks and the fix; change code only when the user asks
+- [ ] scripts/xcode_ci.sh test for each package and build for the app; report each result, or why it couldn't run
 ```
 
 ## Moving an app into packages

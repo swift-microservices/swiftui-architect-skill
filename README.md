@@ -15,6 +15,7 @@ Ask for a feature, a screen, a link between two features, a move into packages o
 - **Predictable view models.** Data, loading and error for each resource, with the same shapes for paging, keyed loads, search and nested models, and the tests a bug would break.
 - **Native navigation across modules.** Features say where their views go, and the app decides which screen each place shows. By default it's `NavigationStack`, `NavigationLink(value:)` and sheets, with no routers inside features, coordinators or navigation libraries unless you ask for one.
 - **Modern Swift.** Swift 6 language mode with the upcoming features Swift is moving to, strict concurrency and strict memory safety, `@Observable` view models on the main actor, `Sendable` services, and loads that start from SwiftUI's own `.task`.
+- **Code that reads like the requirement.** Straight-line code with Apple's sample code as the bar, values built before the calls that take them, one path per error, the toolchain's formatter, and scripts that check what they can.
 - **Names you can predict.** Packages, targets, types, views and files follow the Swift API Design Guidelines and one naming table.
 
 The trade-off is more `Package.swift` files, some deliberate duplication before anything is shared, and an app target that does the wiring. The skill keeps that cost low with templates and clear rules about where code goes.
@@ -66,7 +67,7 @@ The agent loads the skill when a task matches it, even when the request doesn't 
 - "Let the search results open sign-in."
 - "Review this app's architecture."
 
-To add a feature or a screen, link two features, move an app into packages or review one, the agent follows the skill's checklist. Before designing anything new it searches online for how it's usually done, and a checklist that changes code ends with a build and a test run repeated until both pass.
+To add a feature or a screen, link two features, move an app into packages or review one, the agent follows the skill's checklist. Before designing anything new it searches online for how it's usually done, and a checklist that changes code ends with a build, a test run and the skill's checks, repeated until all pass.
 
 An app built another way keeps its structure until you ask to change it; then the skill moves it into packages one buildable step at a time.
 
@@ -76,24 +77,25 @@ The shapes use Swift 6 language mode and the SDK in Xcode 27 or later (Swift too
 
 | Area | Covers |
 |---|---|
-| Modules | What a feature is, its targets and where its boundary goes, `Package.swift`, the shared package and DesignSystem, strings and assets, building and testing, boundary checks, moving an app into packages |
-| Domain | Models, errors, service protocols, live services, mocks, ports between features, and data stored on the device |
+| Modules | What a feature is, its targets and where its boundary goes, what its domain may link, `Package.swift`, the shared package and DesignSystem, strings and assets, building and testing, boundary checks, moving an app into packages |
+| Domain | Models, errors, service protocols, live services, mocks, ports between features, data stored on the device, and work no screen starts |
 | Networking | The API package, its client, and how its errors reach a screen |
 | View models | Loading, several resources, paging, keyed loads, filtering and search, nested models, tests |
 | Views | The views a screen is made of, its error and empty states, paging footers, previews |
 | Composition | The app target: services, environment keys, tabs, and the screens it composes |
 | Navigation | Destinations, the router, links between features, deep links, sheets, covers and alerts |
+| Style | How the code reads: building values, errors, concurrency, access and imports, types and values, formatting |
 | Naming | Packages, targets, types, files and folders |
 
 It builds on SwiftUI, Observation and Swift Package Manager. Which API client, store or sign-in an app uses isn't the skill's call: the agent searches for the established approach, asks you about persistence and authentication, and records each pick where your app keeps its decisions.
 
-Not covered: visual design, accessibility, and the code inside each shape, which the skills below handle.
+Not covered: visual design, accessibility, and the technique inside each shape, such as a view's body, an actor's design or a test, which the skills below handle.
 
 ### Works well with
 
-The skill decides the shapes; these skills cover the design before them and the code inside them. The agent invokes each where a checklist calls for it, such as the system design skill before a new feature and the testing skill before writing tests, and stops at the start of a task until you install any that are missing. Where one's advice differs, the skill's shapes win.
+The skill decides the shapes and how the code reads; these skills cover the design before them, a review's security pass and the technique inside them. The agent invokes each where a checklist calls for it, such as the system design skill before a new feature and the testing skill before writing tests, and stops at the start of a task until you install any that are missing. Where one's advice differs, the skill's shapes win.
 
-- [System Design and Architecture](https://github.com/anthropics/knowledge-work-plugins), from Anthropic's Engineering plugin: a feature's requirements and trade-offs, and decision records for the choices the skill leaves open
+- [System Design, Architecture and Code Review](https://github.com/anthropics/knowledge-work-plugins), from Anthropic's Engineering plugin: a feature's requirements and trade-offs, decision records for the choices the skill leaves open, and a review's security, performance and correctness pass
 - [Swift API Design Guidelines](https://github.com/Erikote04/Swift-API-Design-Guidelines-Agent-Skill): names, argument labels and documentation comments for each module's API
 - [SwiftUI Pro](https://github.com/twostraws/SwiftUI-Agent-Skill): view bodies, modifiers, layout, data flow, localization, performance
 - [Swift Concurrency Pro](https://github.com/twostraws/Swift-Concurrency-Agent-Skill): loads, cancellation, actors, `Sendable` and strict-concurrency diagnostics
@@ -107,21 +109,25 @@ The skill decides the shapes; these skills cover the design before them and the 
 .codex-plugin/               Codex plugin manifest
 .agents/plugins/             Codex marketplace
 skills/swiftui-architect/
-├── SKILL.md                 what every task needs: the shape, rules, common issues, workflows
+├── SKILL.md                 what every task needs: the shape, rules, code style, gotchas, checklists
 ├── agents/openai.yaml       the skill's name in Codex
 ├── references/              read when a task reaches their topic
-│   ├── modules.md           features and their boundaries, packages, the shared package, tests, reviews
-│   ├── domain.md            models, errors, services, mocks, ports between features, stored data
+│   ├── modules.md           features and their boundaries, packages, what Core links, tests, reviews
+│   ├── domain.md            models, errors, services, mocks, ports, stored data, lifetime services
 │   ├── networking.md        the API package, its client and errors
 │   ├── view-models.md       loading, paging, keyed loads, search, nested models
 │   ├── views.md             the views a screen is made of, and its states
 │   ├── composition.md       the app target: services, environment keys, screens
 │   ├── navigation.md        destinations, the router, linking features, sheets and alerts
-│   ├── conventions.md       names and folders
+│   ├── style.md             how the code reads: values, errors, concurrency, imports, formatting
+│   ├── conventions.md       names, folders and files
 │   ├── decisions.md         the search before a design, what's always asked, recording picks
 │   └── related-skills.md    the skills for design and technique, and installing them
 └── scripts/                 run, not read
-    └── check_boundaries.sh  the boundary checks a review runs from the app's root
+    ├── xcode_ci.sh          builds or tests a scheme on a simulator, failing on an owned warning
+    ├── check_boundaries.sh  the boundaries the compiler can't check
+    ├── check_style.sh       the style rules a script can see
+    └── common.sh            what the two check scripts share
 .github/                     validation, the semver label check, releases
 CLAUDE.md                    authoring rules for changing the skill
 ```

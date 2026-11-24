@@ -23,16 +23,8 @@ fi
 
 # A module or type name ends where no letter, digit or underscore follows; grep's \b isn't portable.
 end='([^A-Za-z0-9_]|$)'
-failed=0
-
-# report <rule> <failures>: prints the rule and its failures, if it has any.
-report() {
-    if [ -n "$2" ]; then
-        echo "FAIL $1"
-        printf '%s\n' "$2" | sed 's/^/  /'
-        failed=1
-    fi
-}
+# shellcheck source-path=SCRIPTDIR source=common.sh
+. "$(dirname "$0")/common.sh"
 
 # swift_grep <grep options> <pattern> <folders…>: greps the Swift files under the folders,
 # skipping .build, sorted by file and line. It finds the files itself, since BusyBox's grep has
@@ -166,6 +158,10 @@ report "XCore and Shared import no UI framework, Networking or adapter target" "
         Packages/*/Sources/*Core Packages/Shared/Sources/Shared
 )"
 
+report "No package defaults to the main actor" "$(
+    grep -Hn 'defaultIsolation' Packages/*/Package.swift 2>/dev/null
+)"
+
 report "XUI and SharedUI import no Networking or adapter target" "$(
     swift_grep -lE "import (Networking${adapter_modules:+|$adapter_modules})${end}" Packages/*/Sources/*UI
 )"
@@ -192,6 +188,18 @@ others=$(package_dependencies others)
 if [ -n "$others" ]; then
     echo "REVIEW each is an infrastructure package, such as analytics, never a feature"
     printf '%s\n' "$others" | sed 's/^/  /'
+fi
+
+# What XCore and Shared import beyond Foundation and Shared must be a library Core may link.
+core_modules=$(
+    imported_modules Packages/*/Sources/*Core Packages/Shared/Sources/Shared |
+        grep -vxE "Foundation|Shared|SwiftUI|UIKit|Networking${adapter_modules:+|$adapter_modules}"
+)
+if [ -n "$core_modules" ]; then
+    modules=$(alternatives "$core_modules")
+    echo "REVIEW each does no I/O, runs nothing and has no store, transport or UI types in its API"
+    swift_grep -HnE "import[[:space:]]+(${modules})${end}" \
+        Packages/*/Sources/*Core Packages/Shared/Sources/Shared | sed 's/^/  /'
 fi
 
 # What an adapter target imports beyond Foundation, the shared package, Networking, XCore and the

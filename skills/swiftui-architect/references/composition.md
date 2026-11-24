@@ -61,6 +61,7 @@ struct MoviesApp: App {
 
 - Live or mock is the app's decision, through configuration or launch arguments for UI tests. Features never decide.
 - One service instance per protocol for the app's lifetime; views never create services.
+- A lifetime service is built here too, and started at the end of `init()` (`domain.md#lifetime-services`).
 - App-wide policies, such as caching and tint, are applied here, not in features or DesignSystem.
 - Values that differ by build, such as the API's base URL and key, reach the client through its init from the app. A key is never written in source or committed.
 

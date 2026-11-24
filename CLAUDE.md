@@ -6,8 +6,8 @@ Every change reaches `main` through a pull request and ends with [the checks](#a
 
 ## What the skill is for
 
-- It decides where code lives, who owns it, and the shape of the pieces that hold a modular SwiftUI app together: modules and their dependency direction, domain models and errors, services and the networking client, view models, the views a screen is made of, app composition, navigation and naming.
-- It states shapes, rules and the process an agent follows to fill them. The design before a shape belongs to `system-design` and `architecture`, and how to write the code inside one (view bodies, modifiers and the view each attaches to, layout, API availability, redraw performance, isolation, task groups, how a load guards against stale results, test code and its stubs, SwiftData models and fetches) to `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`, all listed in `references/related-skills.md`.
+- It decides where code lives, who owns it, the shape of the pieces that hold a modular SwiftUI app together and how the code inside them reads: modules and their dependency direction, domain models and errors, services and the networking client, lifetime services, view models, the views a screen is made of, app composition, navigation, naming and the code style.
+- It states shapes, rules, the code style and the process an agent follows to fill them. The design before a shape belongs to `system-design` and `architecture`, a review's security, performance and correctness pass to `code-review`, and the technique inside a shape (view bodies, modifiers and the view each attaches to, layout, API availability, redraw performance, an actor's design, task groups, how a load guards against stale results, test code and its stubs, SwiftData models and fetches) to `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`, all listed in `references/related-skills.md`.
 - Which API, library, protocol, endpoint, store or provider fills a shape belongs to the related skills, or to what the agent's online search finds for that app at that time. A sentence that's true only for some apps, or names a technology as the answer, becomes a question the agent asks the user or a search it runs, as `references/decisions.md` sets out.
 - Out of scope: visual design, accessibility, and anything that belongs to one app built with the skill.
 
@@ -32,10 +32,10 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
 **Structure**
 
 - The skill folder holds only what agents read and run: `SKILL.md`, `references/`, `scripts/` for deterministic checks, and `agents/openai.yaml`, Codex's display name for the skill. Everything for people, such as `README.md`, this file, `.github/` and the license, stays outside it.
-- `SKILL.md` is the entry point and holds only what every task needs, the most important first, since compaction keeps the start. It stays under 500 lines and 5,000 tokens, with its References table inside the first 5,000, and a change that adds to it cuts as much elsewhere. Its sections are: purpose, prerequisites (the toolchain and tools the shapes need), examples (the example app), the shape, dependency direction, who owns what, principles, the shapes in brief, common issues, references, available scripts (a table of `| Script | Purpose | Arguments |`), instructions (the workflows and Verify), limitations (what the skill leaves out) and related skills (a pointer to `references/related-skills.md`). A section that fits a heading SkillEvaluator's quality check looks for takes that heading.
-- Its common issues are mistakes any task can make, in modules, naming, composition or navigation, each one an agent actually makes. A mistake only one shape invites, such as in paging or a keyed load, is stated once, in that shape's reference.
-- A workflow is a checklist the agent copies into its response, ending in a build or test it repeats until it passes. A checklist for a task an app needs once, such as moving it into packages or a review, lives in the reference it follows, with a one-line pointer under Instructions in `SKILL.md`.
-- A script in `scripts/` is run, never read: `SKILL.md`'s Available Scripts gives its arguments and where it runs, and only its output enters the context. It runs on macOS's bash 3.2 and on Linux, BusyBox's tools included, takes no interactive input, prints each failure under the rule it breaks and exits non-zero on any. It checks what a rule's home states, and states no rule of its own.
+- `SKILL.md` is the entry point and holds only what every task needs, the most important first, since compaction keeps the start. It stays under 500 lines and 5,000 tokens, with its References table inside the first 5,000, and a change that adds to it cuts as much elsewhere. Its sections are: purpose, examples (the example app), the shape, dependency direction with its hard rules, who owns what, principles, the shapes in brief, code style, troubleshooting (the gotchas), prerequisites (the toolchain and tools the shapes need), available scripts (a table of `| Script | Purpose | Arguments |`), limitations (what the skill leaves out), references, related skills (a pointer to `references/related-skills.md`) and instructions (the checklists and Verify), last, since an agent copies its checklist into its response. A section that fits a heading SkillEvaluator's quality check looks for takes that heading.
+- Its troubleshooting holds the gotchas: mistakes that compile and then fail only at run time or silently, such as a link whose type no stack registers, each one an agent actually makes. A mistake the build catches, or one only one shape invites, such as in paging or a keyed load, is stated once, in its shape's reference.
+- A checklist is what the agent copies into its response for a task. One that changes code ends in Verify, the build, tests and scripts it repeats until all pass. `SKILL.md`'s Instructions call them checklists, so "workflow" means only a CI workflow. A checklist `SKILL.md`'s budget can't hold, such as moving an app into packages, a review, linking two features or adding a lifetime service, lives in the reference it follows, with a one-line pointer under Instructions in `SKILL.md`.
+- A script in `scripts/` is run, never read: `SKILL.md`'s Available Scripts gives its arguments and where it runs, and only its output enters the context. It runs on macOS's bash 3.2 and on Linux, BusyBox's tools included, except that one needing Xcode, such as `xcode_ci.sh`, runs on macOS only and exits 2 elsewhere, saying so. It takes no interactive input, prints each failure under the rule it breaks and exits non-zero on any. It checks what a rule's home states, and states no rule of its own.
 - Detail lives in `references/`, one topic per file. Every reference is in `SKILL.md`'s References table, saying when to read it, so none is reachable only through another: references stay one level deep. A reference never links to another; it points to one in plain text, as a code span such as `view-models.md#keyed-resources`, which keeps it one level deep for SkillEvaluator too.
 - A one-off command the skill gives an agent pins a released version, such as `npx skills@1.9.0 add`, as the specification's [guide to scripts](https://agentskills.io/skill-creation/using-scripts) asks; SkillSpector reports an unpinned one as a rug-pull risk.
 - A reference over 100 lines starts with a `## Contents` list of its `##` sections.
@@ -44,12 +44,12 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
 
 **Content**
 
-- Only what an agent would get wrong without it: a placement, an ownership rule, a shape, a common issue, or a reason that guides judgment. Cut explanations of what Claude already knows about Swift, SwiftUI or Xcode.
+- Only what an agent would get wrong without it: a placement, an ownership rule, a shape, a style rule, a gotcha, or a reason that guides judgment. Cut explanations of what Claude already knows about Swift, SwiftUI or Xcode.
 - A rule earns its place by how often agents get it wrong. A rare case gets at most a sentence in its reference.
-- One home per rule. A rule lives in one reference; `SKILL.md` carries at most one line for it (a principle, a brief, a common issue or a workflow step); other references point to it instead of restating it, and `conventions.md` holds only the names it uses. A rule stated twice drifts apart and costs tokens twice.
+- One home per rule. A rule lives in one reference; `SKILL.md` carries at most one line for it (a hard rule, a principle, a brief, a style point, a gotcha or a checklist line); other references point to it instead of restating it, and `conventions.md` holds only the names it uses. A rule stated twice drifts apart and costs tokens twice.
 - One home per example, too: code shown in one reference is linked from the others, not repeated.
 - Concrete examples, and one default rather than a menu of options.
-- `references/related-skills.md` lists each related skill, one line each: what it covers, the `name` in that skill's frontmatter, and a link to its source; `SKILL.md`'s Related skills is a pointer to it, and a checklist that covers a skill's task names it at the line that invokes it. Prerequisites names the same skills, and `README.md`'s Works well with links the same sources. `SKILL.md`'s Instructions stop the task before the first checklist until every missing one is installed with the reference's commands, have the agent invoke each with the Skill tool at the line that names it, and Verify checks that it did. The design skills are Anthropic's System Design and Architecture, stack-agnostic and from an established maintainer; the naming skill is Swift API Design Guidelines, which applies the guidelines `conventions.md`'s names follow; the code skills are Paul Hudson's SwiftUI Pro, Swift Concurrency Pro, Swift Testing Pro and SwiftData Pro, one author's skills that agree with each other, chosen for current APIs and a small `SKILL.md`. Where one differs from this skill, this skill's shapes and rules win, and the overlap is never restated here.
+- `references/related-skills.md` lists each related skill, one line each: what it covers, the `name` in that skill's frontmatter, and a link to its source; `SKILL.md`'s Related skills is a pointer to it, and a checklist that covers a skill's task names it at the line that invokes it. Prerequisites names the same skills, and `README.md`'s Works well with links the same sources. `SKILL.md`'s Instructions stop the task before the first checklist until every missing one is installed with the reference's commands, have the agent invoke each with the Skill tool at the line that names it, and Verify checks that it did. The design and review skills are Anthropic's System Design, Architecture and Code Review, stack-agnostic and from an established maintainer; the naming skill is Swift API Design Guidelines, which applies the guidelines `conventions.md`'s names follow; the code skills are Paul Hudson's SwiftUI Pro, Swift Concurrency Pro, Swift Testing Pro and SwiftData Pro, one author's skills that agree with each other, chosen for current APIs and a small `SKILL.md`. Where one differs from this skill, this skill's shapes and rules win, and the overlap is never restated here.
 
 ## What a change must respect
 
@@ -65,10 +65,12 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
   - a filter over loaded values, and a presentation about one value: the Watchlist tab
   - a screen shown over another, from another feature: signing in from the Watchlist tab
   - data stored on the device: the Search tab's recent searches
+  - work no screen starts: the watchlist's changes made offline, sent by `WatchlistSyncService`
 
   Reuse these screens, and add one only when none of them can show a new idea. Never bring in names, endpoints, components or screens from the apps the skill is used on; write the rule they illustrate instead.
 - Code shows a shape the skill prescribes, such as a view model's state and the signatures of its loads, `XView`'s modifiers or a destination enum. It isn't an implementation to copy: no helper functions, error classifiers, test stubs or component internals, and a method body appears only where the body is the shape, such as the canonical `load()` in `view-models.md`, a paged screen's guarded `load()` or a key's reset. A rule about how a method works inside is a sentence, not code. Elide the rest with `…`.
 - Examples stay simple and pleasant to read, for people as much as agents. A rare edge case never makes an example heavier; prefer cutting a rule to adding code for it.
+- The code style is `SKILL.md`'s Code style and `references/style.md`; every example follows it, and a change never weakens it.
 - Example code is Swift 6 against the SDK the `Package.swift` template names, and reads at a glance:
   - Structured concurrency: loads start from SwiftUI's `.task`, `.task(id:)` and `.refreshable`, and an unstructured `Task` appears only where SwiftUI gives none, such as a button's action.
   - The SDK's own API wherever one exists (`@Observable`, `@Entry`, `@ContentBuilder`, `ContentUnavailableView.search`), never a hand-made stand-in or the API it replaced.
@@ -80,7 +82,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
 - No invented states: an empty answer is never an error, and a screen shows only the states its design has.
 - Testing guidance names the tests a bug would break, never a test for what every instance of a shape repeats.
 - Describe the current design only, with no dates, old names, renames, migrations or history.
-- One term per concept, as `references/conventions.md` names it: feature, screen, a tab's root screen, tab XScreen, pushed XScreen, resource, keyed resource, mode, nested model, port, place, the shared package, adapter target, stored model, `XDestination`, `SharedDestination`, `Destination`. Names follow the Swift API Design Guidelines and that file's naming table.
+- One term per concept, as `references/conventions.md` names it: feature, screen, a tab's root screen, tab XScreen, pushed XScreen, resource, keyed resource, mode, nested model, port, lifetime service, place, the shared package, adapter target, stored model, `XDestination`, `SharedDestination`, `Destination`. Names follow the Swift API Design Guidelines and that file's naming table.
 - A new rule mustn't contradict an existing one. When it replaces one, change every place the old rule appears.
 - Voice: plain declarative sentences in the present tense, lists over paragraphs, no "you", no all-caps emphasis, no hedging.
 
@@ -105,6 +107,7 @@ A new reference file gets a lowercase topic name, a Contents list once it passes
    - that every `npx`, `bunx` or `uvx` command in the skill, `README.md` and this file pins a version
    - every relative link and heading anchor in `README.md`, this file and the skill, every pointer in the references and in `SKILL.md`'s checklists, and that no reference links to another
    - that the descriptions and the four versions in `SKILL.md` and the Claude Code and Codex manifests agree, and that the Codex marketplace lists the plugin
+   - that no Swift example puts a `try` or `await` inside an argument or declares a variable before a `do` for its catches to fill
    - that every Swift example stays within 100 columns, documents a declaration with each `///`, and uses none of the APIs the SDK or structured concurrency replaced, such as `ObservableObject`, `NavigationView`, `.onAppear` or `DispatchQueue`
    - `claude plugin validate .` when Claude Code is installed; its warnings that `CLAUDE.md` at the plugin root isn't loaded as context and that there's no icon are expected
 2. SkillEvaluator's Tier 1 passes. Run it on a clean checkout, such as one from `git worktree add --detach`, since an ignored file such as `.DS_Store` leaves its security scan incomplete, with its reports written outside the repository. With an API key from [build.nvidia.com](https://build.nvidia.com) in `NVIDIA_API_KEY` it adds an LLM rubric and security review; without one, pass `--no-llm`. The rubric moves several points between runs, so a change that alters `SKILL.md` compares two runs of `skillevaluator tier1 rubric-eval` against two on its base:
@@ -125,13 +128,13 @@ A new reference file gets a lowercase topic name, a Contents list once it passes
    $tier2 skills/swiftui-architect --catalog <folder outside the repo>/related-skills.json --full-body -o <folder outside the repo>
    ```
 4. A new or changed code shape type-checks in a scratch package with the `Package.swift` template's settings, built with `xcodebuild` for an iOS Simulator against the current SDK.
-5. A new or changed script passes `shellcheck` and `/bin/bash -n`, and runs from the root of a sample app that passes and of one that breaks each rule it checks, built in a scratch folder, with the same output on macOS and in a Linux container.
+5. A new or changed script passes `shellcheck` and `/bin/bash -n`, and runs from the root of a sample app that passes and of one that breaks each rule it checks, built in a scratch folder, with the same output on macOS and in a Linux container. `xcode_ci.sh` instead runs on scratch packages: one that passes, one with a warning of its own, a test that fails, and one whose dependency warns.
 6. Review the diff for what no script checks:
 
    ```
    - [ ] Each rule has one home: SKILL.md carries at most one line for it, and other files point to it
    - [ ] Nothing explains what Claude already knows
-   - [ ] Examples are the movie browser's, show a shape rather than an implementation, and read at a glance
+   - [ ] Examples are the movie browser's, follow the code style, show a shape rather than an implementation, and read at a glance
    - [ ] Terms are conventions.md's, and grep finds no stale name or rule, no history, and no name from an app the skill is used on
    - [ ] README.md still describes what the skill covers
    - [ ] Nothing states UI technique the related skills own, such as a modifier's placement or an API's availability
@@ -152,7 +155,7 @@ A new reference file gets a lowercase topic name, a Contents list once it passes
   | Label | When |
   |---|---|
   | `⚠️ semver/major` | A rule or shape changes so that code following the skill no longer conforms, such as a renamed target or a reversed ownership rule |
-  | `🆕 semver/minor` | New guidance that contradicts none: a shape, a rule, a common issue, a reference, a script |
+  | `🆕 semver/minor` | New guidance that contradicts none: a shape, a rule, a gotcha, a reference, a script |
   | `🔨 semver/patch` | A correction, clearer wording or a better example, with no rule changed |
   | `semver/none` | Nothing the skill says changes: the README, this file, CI, `.github/scripts` |
 
