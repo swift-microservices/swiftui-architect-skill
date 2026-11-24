@@ -23,7 +23,7 @@ fi
 
 # A module or type name ends where no letter, digit or underscore follows; grep's \b isn't portable.
 end='([^A-Za-z0-9_]|$)'
-# shellcheck source=common.sh
+# shellcheck source-path=SCRIPTDIR source=common.sh
 . "$(dirname "$0")/common.sh"
 
 # swift_grep <grep options> <pattern> <folders…>: greps the Swift files under the folders,

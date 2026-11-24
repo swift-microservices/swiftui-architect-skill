@@ -24,7 +24,7 @@ if [ ! -d Packages ]; then
     exit 2
 fi
 
-# shellcheck source=common.sh
+# shellcheck source-path=SCRIPTDIR source=common.sh
 . "$(dirname "$0")/common.sh"
 
 # owned_files: the app's own Swift files, one per line, leaving out tests, build products

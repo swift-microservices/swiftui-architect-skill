@@ -9,8 +9,8 @@
 #     xcode_ci.sh build MoviesApp
 #
 # Other arguments go to xcodebuild; a -destination among them replaces the simulator this
-# script picks. It touches the repository's Swift files first, since a file a build doesn't
-# compile again reports no warning. Prints xcodebuild's errors and warnings, then each warning
+# script picks. It touches the repository's Swift files first, since a build reports the
+# warnings of only the files it compiles again. Prints xcodebuild's errors and warnings, then each warning
 # in the repository's own code under FAIL and each other warning under REVIEW, and exits 1 if
 # the build or a test fails or the repository's own code has a warning.
 
@@ -80,7 +80,7 @@ owned=$(printf '%s\n' "$warnings" | grep -F "$root/" | grep -vE "$dependencies")
 others=$(printf '%s\n' "$warnings" | grep -v '^$' | grep -vxF -e "${owned:-//}")
 
 if [ -n "$owned" ]; then
-    echo "FAIL The repository's own code builds with no warning"
+    echo "FAIL The repository's own code builds cleanly, so each of its warnings is fixed"
     printf '%s\n' "$owned" | sed 's/^/  /'
     status=1
 fi
@@ -94,4 +94,4 @@ if [ "$status" -ne 0 ]; then
     exit 1
 fi
 
-echo "xcodebuild $action passed with no warning in the repository's own code."
+echo "xcodebuild $action passed, and the repository's own code built cleanly."
