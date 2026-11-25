@@ -73,7 +73,7 @@ XCore and Shared are what every other target builds on, so they link only what a
 
 Everything else stays out, with no exception:
 - A store's framework, a provider's SDK, Networking and any framework that reaches the device's capabilities are sources: their types stay in their adapter targets, behind service protocols. That holds where the platform's own guidance reads a store's models from views: the stored models stay in the store's adapter target (`domain.md#data-stored-on-the-device`).
-- SwiftUI and Observation are the UI's, in XUI.
+- SwiftUI, UIKit, AppKit and WatchKit are the UI's, in XUI.
 
 ## Inside a feature
 
@@ -215,7 +215,7 @@ let package = Package(
 )
 ```
 
-- Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.4 or later, whose SDK has the APIs the shapes use.
+- `platforms` lists each platform the app runs on at its minimum version, the user's answer (`decisions.md#always-asked`); the movie browser's is iOS 26. The tools version is the team's toolchain, 6.4 or later, whose SDK has the APIs the shapes use.
 - Every target builds in Swift 6 mode with these settings, the defaults Swift is moving to, and a package added later starts from them.
 - Access levels and imports follow `style.md#access-control-and-imports`.
 - No package sets `.defaultIsolation(MainActor.self)`: domain types, errors and destinations cross actors, so UI types are marked `@MainActor` instead.
@@ -309,8 +309,8 @@ xcode_ci.sh build MoviesApp
 ```
 
 - A package's scheme is `<Package>-Package` when it has several products, and its product's name when it has one.
-- The script runs `xcodebuild` on an installed iPhone simulator and fails on a warning in the repository's own code. It lists a dependency's warning under REVIEW, as a departure to record (`decisions.md#warnings-from-dependencies`).
-- `swift build` and `swift test` build for the Mac, where an iOS-only package's views and view models don't compile.
+- The script runs `xcodebuild` once for each platform the package lists in `platforms`, or the app's scheme supports: on the Mac for macOS, and on an installed simulator for each other platform. It fails on a warning in the repository's own code, and lists a dependency's warning under REVIEW, as a departure to record (`decisions.md#warnings-from-dependencies`).
+- `swift build` and `swift test` build only for the Mac, where a package for other platforms doesn't compile.
 
 ## Checking the boundaries
 
@@ -344,7 +344,7 @@ An app built another way keeps its structure until the user asks to change it. A
 Restructuring moves the app in steps that each leave it building. Copy this checklist into the response:
 
 ```
-- [ ] Map the app: its capabilities (a feature each, by the boundary tests in references/modules.md#defining-features), their screens, and what two features already share
+- [ ] Map the app: its platforms and their minimum versions, from its project (references/decisions.md#always-asked); its capabilities (a feature each, by the boundary tests in references/modules.md#defining-features), their screens, and what two features already share
 - [ ] Networking, then DesignSystem, then the shared package with only what two features already share; build the app after each
 - [ ] One feature at a time, the one using the fewest others first so it needs the fewest ports, as in SKILL.md's Add a feature: its reach into other features becomes destinations and ports, and the code still in the app target switches to its public API
 - [ ] As screens leave the app target, their services move into <AppName>App.init and their navigation into Router, Destination, DestinationView and navigationDestinations()

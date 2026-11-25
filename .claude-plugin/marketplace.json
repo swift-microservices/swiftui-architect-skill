@@ -29,8 +29,7 @@
         "navigation",
         "dependency-injection",
         "mvvm",
-        "spm",
-        "openapi"
+        "spm"
       ],
       "source": "./"
     }

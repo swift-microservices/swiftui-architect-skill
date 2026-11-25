@@ -20,7 +20,7 @@ The code inside a shape:
 
 ## Installing them
 
-Every one of these eight skills is installed before any checklist starts. The skill list in the session is compared with their names; a skill installed with a plugin is present under its plugin's prefix, such as `engineering:system-design`. When any is missing, the user is asked, in one message, to install each with its source's command, and the task stops until every one is installed:
+A skill is installed when a checklist line that names it is reached. The skill list in the session is compared with its name; a skill installed with a plugin is present under its plugin's prefix, such as `engineering:system-design`. When it's missing, the user is asked to install it with its source's command; if the user declines, the task proceeds without it, and the response names the skill whose pass was skipped:
 
 ```
 npx skills@1.9.0 add https://github.com/anthropics/knowledge-work-plugins --skill system-design architecture code-review
@@ -32,8 +32,8 @@ npx skills@1.9.0 add https://github.com/twostraws/SwiftData-Agent-Skill --skill 
 ```
 
 - A command lists only the missing skills from its source.
-- A checklist line that names a skill invokes it with the Skill tool at that line, or, in a harness without one, reads its `SKILL.md` there. The agent never works from what it already knows of the skill's subject in its place.
-- Verify checks that each skill the task's checklist names was invoked.
+- A checklist line that names a skill invokes it with the Skill tool at that line, or, in a harness without one, reads its `SKILL.md` there. The agent never works from what it already knows of the skill's subject in its place, and a skipped pass is reported as skipped, never as done.
+- Verify checks that each skill the task's checklist names was invoked, or reported as skipped.
 
 ## Where this skill wins
 

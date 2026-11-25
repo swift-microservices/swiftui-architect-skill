@@ -154,7 +154,7 @@ report "Features depend only on the shared package, DesignSystem and Networking"
 )"
 
 report "XCore and Shared import no UI framework, Networking or adapter target" "$(
-    swift_grep -lE "import (SwiftUI|UIKit|Networking${adapter_modules:+|$adapter_modules})${end}" \
+    swift_grep -lE "import (SwiftUI|UIKit|AppKit|WatchKit|Networking${adapter_modules:+|$adapter_modules})${end}" \
         Packages/*/Sources/*Core Packages/Shared/Sources/Shared
 )"
 
@@ -193,7 +193,7 @@ fi
 # What XCore and Shared import beyond Foundation and Shared must be a library Core may link.
 core_modules=$(
     imported_modules Packages/*/Sources/*Core Packages/Shared/Sources/Shared |
-        grep -vxE "Foundation|Shared|SwiftUI|UIKit|Networking${adapter_modules:+|$adapter_modules}"
+        grep -vxE "Foundation|Shared|SwiftUI|UIKit|AppKit|WatchKit|Networking${adapter_modules:+|$adapter_modules}"
 )
 if [ -n "$core_modules" ]; then
     modules=$(alternatives "$core_modules")
