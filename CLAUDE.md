@@ -68,6 +68,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
   - work no screen starts: the watchlist's changes made offline, sent by `WatchlistSyncService`
 
   Reuse these screens, and add one only when none of them can show a new idea. Never bring in names, endpoints, components or screens from the apps the skill is used on; write the rule they illustrate instead.
+- The movie browser's pieces are its own, never the rule. A rule states the contract, such as `Shared<API>` for an API's shared mappings, the app's top-level places or DesignSystem once an app has a visual language of its own, and labels the movie browser's piece (`SharedTMDB`, its three tabs) as the example.
 - Code shows a shape the skill prescribes, such as a view model's state and the signatures of its loads, `XView`'s modifiers or a destination enum. It isn't an implementation to copy: no helper functions, error classifiers, test stubs or component internals, and a method body appears only where the body is the shape, such as the canonical `load()` in `view-models.md`, a paged screen's guarded `load()` or a key's reset. A rule about how a method works inside is a sentence, not code. Elide the rest with `…`.
 - Examples stay simple and pleasant to read, for people as much as agents. A rare edge case never makes an example heavier; prefer cutting a rule to adding code for it.
 - The code style is `SKILL.md`'s Code style and `references/style.md`; every example follows it, and a change never weakens it.
@@ -79,7 +80,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
   - Lines stay within 100 columns: a long signature or call takes one argument per line, and a closure that doesn't fit names its parameter and takes its own lines.
 - Examples use native SwiftUI navigation, the skill's default, with no navigation library, DI container or invented infrastructure.
 - No API, library, protocol, endpoint, store, provider or data format is named as the answer. Where an app needs one, the skill sends the agent to the related skills, the search or the user (`references/decisions.md`).
-- The platforms an app runs on and their minimum versions are the user's answer, with no default (`references/decisions.md`); the movie browser runs on iOS 26. A rule, check or script holds on every platform an app declares and assumes none.
+- The platforms an app runs on and their minimum versions are the user's answer, with no default; the agent recommends the lowest minimums the shapes run on, iOS 18 and its counterparts (`references/decisions.md`). The movie browser runs on iOS 26. A rule, check or script holds on every platform an app declares and assumes none.
 - No invented states: an empty answer is never an error, and a screen shows only the states its design has.
 - Testing guidance names the tests a bug would break, never a test for what every instance of a shape repeats.
 - Describe the current design only, with no dates, old names, renames, migrations or history.

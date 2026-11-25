@@ -38,13 +38,13 @@ App target            composition root: services, screens, routing
 ├── Feature packages  one per capability (Discover, Catalog, Search, …)
 │   XCore       domain models, errors, a service protocol and mock per screen
 │   XUI         view models, views, XDestination, strings
-│   X<Source>   an adapter target per source, the API (XTMDB), a store or an SDK: live services
+│   X<Source>   an adapter target per source, an API (CatalogTMDB), a store or an SDK: live services
 └── Below the features
     Shared        Shared: domain vocabulary several features use
                   SharedUI: views several features show, SharedDestination
-                  SharedTMDB: API mappings and client steps several features share
-    DesignSystem  domain-free tokens, styles and components
-    Networking    the API's types and client
+                  Shared<API>: mappings and client steps several features share
+    DesignSystem  the app's own tokens, styles and components, if any
+    Networking    each API's types and client, if any
 ```
 
 ## Dependency direction
@@ -52,19 +52,20 @@ App target            composition root: services, screens, routing
 Each module imports only what its arrow names; nothing points back up.
 
 ```
-App        → XCore, XUI, adapter targets, Shared, SharedUI, DesignSystem, Networking
-XUI        → XCore, Shared, SharedUI, DesignSystem
-X<Source>  → XCore, Shared, its source (Networking and SharedTMDB for XTMDB)
-XCore      → Shared
-X…Tests    → the target they test, and what their tests name
-SharedUI   → Shared, DesignSystem
-SharedTMDB → Shared, Networking
-Shared, DesignSystem, Networking → Apple frameworks and their own dependencies
+App         → XCore, XUI, adapter targets, Shared, SharedUI, DesignSystem, Networking
+XUI         → XCore, Shared, SharedUI, DesignSystem, UI frameworks
+X<Source>   → XCore, Shared, its source (Networking and Shared<API> for an API)
+XCore       → Shared, what Core may link
+X…Tests     → the target they test, and what their tests name
+SharedUI    → Shared, DesignSystem, UI frameworks
+Shared<API> → Shared, Networking
+Shared      → what Core may link
+DesignSystem, Networking → Apple frameworks and their own dependencies
 ```
 
 Hard rules:
 - A feature never imports another. Features meet only in the app: links through its destination mapping, data through ports it implements.
-- XCore and Shared link only Foundation, Shared and libraries with no I/O and no store, transport or UI types ([what Core may link](references/modules.md#what-core-may-link)).
+- XCore and Shared link no UI framework or infrastructure; any other library passes [what Core may link](references/modules.md#what-core-may-link).
 - A source's types never leave its adapter targets, which map them to domain models and its errors to the feature's.
 - DesignSystem knows no feature's models, services or destinations.
 
@@ -109,7 +110,7 @@ Code reads like the requirement it implements, with Apple's WWDC sample code as 
 
 ## Prerequisites
 
-- Xcode with Swift 6.4 or later, its SDK and simulators for the app's platforms ([testing](references/modules.md#testing)).
+- Xcode 27 or later (Swift 6.4) and simulators for the app's platforms ([testing](references/modules.md#testing)).
 - Web access for the search ([decisions.md](references/decisions.md)).
 - The [related skills](#related-skills) `system-design`, `architecture`, `code-review`, `swift-api-design-guidelines-skill`, `swiftui-pro`, `swift-concurrency-pro`, `swift-testing-pro` and `swiftdata-pro`.
 
@@ -160,7 +161,7 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 - [ ] Adapter targets, with swift-concurrency-pro: a live service per protocol, mapping its source's values to the domain and errors to XError; stored data with swiftdata-pro if it's SwiftData
 - [ ] XUI, with swiftui-pro and swift-concurrency-pro: XViewModel, XView, XPhaseView, XContentView, XDestination, Localizable.xcstrings; push places another feature already links to as `SharedDestination`
 - [ ] Test targets, with swift-testing-pro: the screens' own rules and the mappings (references/modules.md#testing)
-- [ ] App: add the package to the app's project, or the manifest that generates it, linking XCore, XUI and the adapter targets
+- [ ] App: add the package to the app's project or its manifest, linking XCore, XUI and the adapter targets
 - [ ] App: per service protocol, an environment key, the service built in <AppName>App.init and injected on the Scene
 - [ ] App: an XScreen per screen but a tab's root screen, presented ones included; Destination and DestinationView cases; Destination.init(_: XDestination) and its line in navigationDestinations()
 - [ ] App, for a tab's root screen: a TabDestination case, its Tab in ContentView, and a tab XScreen owning the stack, with navigationDestinations() at its root
@@ -181,7 +182,7 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 
 **Modularize an existing app**: the checklist in [moving an app into packages](references/modules.md#moving-an-app-into-packages).
 
-**Add search**: across the app → a Search tab, its own feature; through what a screen shows → [a filter](references/view-models.md#filtering-loaded-values); on the server, in one screen → a `SearchSession` [mode](references/view-models.md#modes).
+**Add search**: across the app → a Search feature; through what a screen shows → [a filter](references/view-models.md#filtering-loaded-values); on the server, in one screen → a `SearchSession` [mode](references/view-models.md#modes).
 
 **Verify**
 
@@ -193,7 +194,7 @@ Copy the task's checklist into the response, **Verify**'s lines for its `Verify`
 - [ ] Fix and repeat until all pass; a concurrency diagnostic goes through swift-concurrency-pro, never silenced; a dependency's warning is a departure (references/decisions.md#warnings-from-dependencies)
 ```
 
-**Link one feature to another** (Watchlist opens sign-in): the checklist in [linking two features](references/navigation.md#linking-two-features).
+**Link one feature to another**: the checklist in [linking two features](references/navigation.md#linking-two-features).
 
 **Review an app**: the checklist in [checking the boundaries](references/modules.md#checking-the-boundaries).
 

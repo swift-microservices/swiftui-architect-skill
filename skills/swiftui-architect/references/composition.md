@@ -107,6 +107,8 @@ struct ContentView: View {
 
 Each tab's title and icon are written here, in its `Tab`.
 
+The top-level places come from the app's design, and the movie browser's are three tabs. An app without tabs has one root screen, whose XScreen owns the window's one stack, and a `Router` holding that one path, with no `TabDestination`.
+
 ## XScreen: tab and pushed
 
 An `XScreen` is a small app view that composes one screen: it reads services from the environment, builds the feature's view model, and passes it to the feature's public view. It's named after that view (`MovieDetailView` → `MovieDetailScreen`), and builds the view model inline, passing every service its nested models (`view-models.md#nested-models-and-modes`) use too.

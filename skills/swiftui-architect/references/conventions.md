@@ -9,7 +9,7 @@
 
 `X` is a feature's name in UpperCamelCase (`Catalog`), or one of its screens' (`MovieCast`); `x` is lowerCamelCase. A screen uses its noun in every slot (`MovieCastService`, `MovieCastViewModel`, `MovieCastView`, `MovieCastScreen`), and what spans the feature uses the feature's name (`CatalogDestination`, `CatalogError`). Which name a screen, model or shared view takes inside a feature is in `modules.md#inside-a-feature`.
 
-Names follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/), applied with `swift-api-design-guidelines-skill` (`related-skills.md`), with an initialism in one case (`movieID`, `posterURL`, `CatalogTMDB`). This table holds the names the skill's shapes take, which win where the two differ.
+Names follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/), applied with `swift-api-design-guidelines-skill` (`related-skills.md`), with an initialism in one case (`movieID`, `posterURL`, `CatalogTMDB`). This table holds the names the skill's shapes take.
 
 | Kind | Name | Example |
 |---|---|---|
@@ -59,8 +59,8 @@ Names follow the [Swift API Design Guidelines](https://www.swift.org/documentati
 | XUI | a folder per screen: its view model and nested models, views, toolbar, paging footers and display mappings, with a subfolder per mode or set of sections (`GenreDetail/Search/`, `MovieDetail/Sections/`); `Components/`: the views and display mappings several screens use, filed by kind (`Cards/`, `Rails/`); `Navigation/`; `Resources/` |
 | Adapter target | `Mapping/`, `Services/`; the store's adds `Storage/` for stored models |
 | Test target | a file per view model, per adapter target's mappings and per live service with rules of its own (`MovieCastViewModelTests.swift`, `CatalogMappingTests.swift`); `Fixtures.swift` |
-| Shared | `Domain/`; SharedUI: `Components/`, `Navigation/`, `Resources/`; SharedTMDB: `Mapping/`, and `Services/` for client steps several features share |
-| Networking | the client, its error, and the API's types |
+| Shared | `Domain/`; SharedUI: `Components/`, `Navigation/`, `Resources/`; `Shared<API>`: `Mapping/`, and `Services/` for client steps several features share |
+| Networking | for each API: its client, its error and its types |
 | App | `App/`, `Adapters/`, `Extensions/Environment/`, `Navigation/`, `Screens/` |
 
 ## Files
