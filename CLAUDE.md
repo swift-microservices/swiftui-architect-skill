@@ -80,7 +80,7 @@ These come from Anthropic's [skill authoring best practices](https://platform.cl
   - Lines stay within 100 columns: a long signature or call takes one argument per line, and a closure that doesn't fit names its parameter and takes its own lines.
 - Examples use native SwiftUI navigation, the skill's default, with no navigation library, DI container or invented infrastructure.
 - No API, library, protocol, endpoint, store, provider or data format is named as the answer. Where an app needs one, the skill sends the agent to the related skills, the search or the user (`references/decisions.md`).
-- The platforms an app runs on and their minimum versions are the user's answer, with no default; the agent recommends the lowest minimums the shapes run on, iOS 18 and its counterparts (`references/decisions.md`). The movie browser runs on iOS 26. A rule, check or script holds on every platform an app declares and assumes none.
+- The platforms an app runs on and their minimum versions are the user's answer, with no default (`references/decisions.md`); the movie browser runs on iOS 18. Every shape uses only API that iOS 18, macOS 15, tvOS 18, watchOS 11 and visionOS 2 have, and builds with the latest Xcode and its SDKs. A rule, check or script holds on every platform an app declares and assumes none.
 - No invented states: an empty answer is never an error, and a screen shows only the states its design has.
 - Testing guidance names the tests a bug would break, never a test for what every instance of a shape repeats.
 - Describe the current design only, with no dates, old names, renames, migrations or history.

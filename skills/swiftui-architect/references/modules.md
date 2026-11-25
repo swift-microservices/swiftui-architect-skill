@@ -152,7 +152,7 @@ let package = Package(
     name: "Catalog",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v26)
+        .iOS(.v18)
     ],
     products: [
         .library(name: "CatalogCore", targets: ["CatalogCore"]),
@@ -219,8 +219,8 @@ let package = Package(
 )
 ```
 
-- `platforms` lists each platform the app runs on at its minimum version, the user's answer (`decisions.md#always-asked`); the movie browser's is iOS 26. The tools version is 6.4 or later, from Xcode 27 or later, whose SDK has the APIs the shapes use.
-- Every target builds in Swift 6 mode with these settings, the defaults Swift is moving to, and a package added later starts from them.
+- `platforms` lists each platform the app runs on at its minimum version, the user's answer (`decisions.md#always-asked`); the movie browser's is iOS 18. The app builds with the latest Xcode and its SDKs, which the agent recommends, Xcode 27 and Swift 6.4 at least, and the tools version is that Xcode's Swift.
+- Every target builds in Swift 6 mode with these settings, which turn on every upcoming feature Swift 6 mode leaves off, and a package added later starts from them. The app target sets the same in its build settings: each feature's `SWIFT_UPCOMING_FEATURE_…` setting, `-enable-upcoming-feature ImmutableWeakCaptures` in Other Swift Flags, since it has no setting, and `SWIFT_STRICT_MEMORY_SAFETY`.
 - Access levels and imports follow `style.md#access-control-and-imports`.
 - No package sets `.defaultIsolation(MainActor.self)`: domain types, errors, destinations and display mappings cross actors, and a type moved between XCore and XUI keeps its isolation, so UI types are marked `@MainActor` instead. The app target, which only composes the UI, keeps Xcode's main-actor default.
 

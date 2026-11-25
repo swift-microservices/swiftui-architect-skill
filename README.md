@@ -71,7 +71,7 @@ To add a feature or a screen, link two features, move an app into packages or re
 
 An app built another way keeps its structure until you ask to change it; then the skill moves it into packages one buildable step at a time.
 
-The shapes build with Xcode 27 or later (Swift 6.4) in Swift 6 language mode, and run on iOS 18, macOS 15, tvOS 18, watchOS 11 and visionOS 2 or later. The agent asks which platforms your app runs on and their minimum versions, recommending those, or reads them from your project.
+The shapes build with the latest Xcode and its SDKs, Xcode 27 (Swift 6.4) at least, in Swift 6 language mode, and use only API that iOS 18, macOS 15, tvOS 18, watchOS 11 and visionOS 2 have. The agent asks which platforms your app runs on and their minimum versions, or reads them from your project.
 
 ## What it covers
 

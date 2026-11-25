@@ -30,7 +30,7 @@ Then:
 
 Each is asked before the design that needs it, and this skill names no answer for persistence or authentication.
 
-- The shapes run on iOS and iPadOS 18, macOS 15, tvOS 18, watchOS 11 and visionOS 2 or later, where `Tab` arrives, so the agent recommends those as the lowest minimums, and the user decides. Each platform's minimum has every API the app uses, as `swiftui-pro` checks; a version too old for one is put back to the user, naming the API it lacks.
+- Every shape uses only API that iOS and iPadOS 18, macOS 15, tvOS 18, watchOS 11 and visionOS 2 have, so an app's minimums go as low as those. Each platform's minimum has every API the app uses, as `swiftui-pro` checks; a version too old for one is put back to the user, naming the API it lacks.
 - The search for persistence or authentication gathers the established options to put to the user and adopts none: nothing is defaulted, picked or recommended unless the user asks for a recommendation. Once the user answers, the search finds how that answer is built, and the shapes hold it: stored data behind a service protocol (`domain.md#data-stored-on-the-device`), a signed-in account owned by one feature and reached through ports (`domain.md#cross-feature-services-consumer-owned-ports`).
 
 A requirement outside this skill's scope, such as visual design, accessibility or a target beyond the app, is a question for the user, never an invented shape.
