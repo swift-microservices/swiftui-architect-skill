@@ -130,10 +130,10 @@ public struct TMDBMovieDetailService: MovieDetailService {
 }
 ```
 
-- Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer, and a response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in SharedTMDB (`modules.md#shared-sharedui-and-sharedtmdb`).
+- Mapping lives in `Model+Source.swift` extensions (`Movie+TMDB.swift`, `CatalogError+TMDB.swift`). A model maps from its response in a failable initializer, and a response that can't be read is `.unavailable`. A mapping to a Shared model that several features read lives once, in `Shared<API>` (`modules.md#the-shared-package`).
 - The feature's error maps from the client's error in an initializer, and `CancellationError` passes through untouched (`networking.md#errors-and-cancellation`).
-- A client step that two of a feature's live services share, such as reading extra artwork, is an extension on the client in XTMDB, with internal members.
-- A client step that several features share, such as discovering movies by genre for Discover and for Search's filter, is an extension on the client in SharedTMDB's `Services/` (`TMDBClient+DiscoverMovies.swift`), with public members. It takes Shared values, returns a Shared model, and throws the client's error for each feature to map to its own.
+- A client step that two of a feature's live services share, such as reading extra artwork, is an extension on the client in the feature's `X<API>`, with internal members.
+- A client step that several features share, such as discovering movies by genre for Discover and for Search's filter, is an extension on the client in `Shared<API>`'s `Services/` (`TMDBClient+DiscoverMovies.swift`), with public members. It takes Shared values, returns a Shared model, and throws the client's error for each feature to map to its own.
 
 ## Data stored on the device
 

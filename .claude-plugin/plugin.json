@@ -17,8 +17,7 @@
     "navigation",
     "dependency-injection",
     "mvvm",
-    "spm",
-    "openapi"
+    "spm"
   ],
   "skills": [
     "./skills/swiftui-architect"

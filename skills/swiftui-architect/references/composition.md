@@ -90,14 +90,20 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
-            Tab(.appTabDiscover, systemImage: …, value: .discover) {
+            Tab(value: .discover) {
                 DiscoverScreen()
+            } label: {
+                Label(.appTabDiscover, systemImage: …)
             }
-            Tab(.appTabWatchlist, systemImage: …, value: .watchlist) {
+            Tab(value: .watchlist) {
                 WatchlistScreen()
+            } label: {
+                Label(.appTabWatchlist, systemImage: …)
             }
-            Tab(.appTabSearch, systemImage: …, value: .search, role: .search) {
+            Tab(value: .search, role: .search) {
                 SearchScreen()
+            } label: {
+                Label(.appTabSearch, systemImage: …)
             }
         }
         .environment(router)
@@ -105,7 +111,9 @@ struct ContentView: View {
 }
 ```
 
-Each tab's title and icon are written here, in its `Tab`.
+Each tab's title and icon are written here, in its `Tab`'s label.
+
+The top-level places come from the app's design, and the movie browser's are three tabs. An app without tabs has one root screen, whose XScreen owns the window's one stack, and a `Router` holding that one path, with no `TabDestination`.
 
 ## XScreen: tab and pushed
 

@@ -1,6 +1,6 @@
 # Modules
 
-The app is built from local Swift packages: one per feature, plus the shared package, DesignSystem and Networking, which every feature stands on. The compiler enforces the boundaries, since a module can use only what its package declares.
+The app is built from local Swift packages: one per feature and, below the features, the shared package, DesignSystem once the app has a visual language of its own, and Networking when it calls an API. The compiler enforces the boundaries, since a module can use only what its package declares.
 
 ## Contents
 - Defining features
@@ -9,7 +9,7 @@ The app is built from local Swift packages: one per feature, plus the shared pac
 - Inside a feature
 - Folder layout
 - Package.swift template
-- Shared, SharedUI and SharedTMDB
+- The shared package
 - DesignSystem
 - Networking and other infrastructure
 - Placing a type
@@ -33,7 +33,7 @@ Decide a boundary by change and meaning:
 Then check what a split costs. Only three things cross between features:
 - IDs, through destinations
 - narrow questions, through ports (`domain.md#cross-feature-services-consumer-owned-ports`), as Catalog asks Watchlist whether a movie is kept
-- the shared vocabulary, through [the shared package](#shared-sharedui-and-sharedtmdb)
+- the shared vocabulary, through [the shared package](#the-shared-package)
 
 A split that needs more, such as one side's own types or a port for most of what the other does, is one feature.
 
@@ -44,7 +44,7 @@ Avoid:
 - A package per screen (`MovieDetail`, `MovieCast`). It splits one model across packages, so features import each other or the shared package grows.
 - A package per tab that gathers several capabilities (`Home`), or per model other features show (`Movie`, `Person`, `Genre`). Every screen shows several such models, so their packages would import each other, which features never do.
 - A package per layer (`Models`, `Services`, `Views`) that every feature shares.
-- Moving a model to the shared package to avoid a port ([the promotion rule](#shared-sharedui-and-sharedtmdb)).
+- Moving a model to the shared package to avoid a port ([the promotion rule](#the-shared-package)).
 
 ## Feature packages
 
@@ -53,27 +53,30 @@ Each feature is one package: its domain and UI, an adapter target for each sourc
 | Target | Contains | Imports |
 |---|---|---|
 | `XCore` | Domain models, `XError`, a service protocol and mock per screen, ports | `Shared`, and what [Core may link](#what-core-may-link) |
-| `XUI` | View models, views, `XDestination`, `Localizable.xcstrings`, display mappings | `XCore`, `Shared`, `SharedUI`, `DesignSystem` |
-| `X<Source>`, an adapter target | The live services over one source, mapping what it returns and its errors to the domain. The source is the API (`CatalogTMDB`), the store the user picked (`Search<Store>`) or a provider's SDK | `XCore`, `Shared` and its source: `Networking` and `SharedTMDB` for the API |
+| `XUI` | View models, views, `XDestination`, `Localizable.xcstrings`, display mappings | `XCore`, `Shared`, `SharedUI`, `DesignSystem`, the UI frameworks |
+| `X<Source>`, an adapter target | The live services over one source, mapping what it returns and its errors to the domain. The source is an API (`CatalogTMDB`), the store the user picked (`Search<Store>`) or a provider's SDK | `XCore`, `Shared` and its source: `Networking` and `Shared<API>` for an API |
 
 A feature declares only the adapter targets its services read: Catalog is `CatalogCore`, `CatalogUI` and `CatalogTMDB`, tested in `CatalogUITests` and `CatalogTMDBTests`; Search adds `Search<Store>` for its recent searches.
 
-- XCore has no SwiftUI and no infrastructure, so the domain stays testable and usable by any UI.
 - XUI depends on XCore's protocols, never on an adapter target, so it builds, previews and tests on mocks alone.
-- A source's types never leave its adapter targets: the API's stay in XTMDB and SharedTMDB, the store's in X<Store>. Every service has one source (`domain.md#service-protocols`), so each live service sits in one adapter target.
-- Adapter targets never import each other. The API's import the shared package's, SharedTMDB, which stands below every feature.
-- Mappings and stored models are `package`, so the package's test targets reach them and the app sees only the `public` live services. A stored model is `public` only when the app needs it to open the store, and SharedTMDB's mappings are `public`, since other packages' adapter targets use them.
+- A source's types never leave its adapter targets: an API's stay in `X<API>` and `Shared<API>`, the store's in `X<Store>`. Every service has one source (`domain.md#service-protocols`), so each live service sits in one adapter target.
+- Adapter targets never import each other. An API's import the shared package's for that API, `Shared<API>`, which stands below every feature.
+- Mappings and stored models are `package`, so the package's test targets reach them and the app sees only the `public` live services. A stored model is `public` only when the app needs it to open the store, and `Shared<API>`'s mappings are `public`, since other packages' adapter targets use them.
 - The app links XCore, XUI and the adapter targets: it builds live services from the adapter targets and shows views from XUI (`composition.md`).
 
 ## What Core may link
 
-XCore and Shared are what every other target builds on, so they link only what any target could use:
-- Foundation, and Shared for XCore
-- a library that does no I/O, has nothing to run, puts no store, transport or UI types in its API, and is stable enough for its types to appear in service protocols
+XCore holds the feature's domain and business rules, and Shared the vocabulary several features share. Every other target builds on them, so they never link a UI framework or infrastructure, and the domain stays testable and usable by any UI. Besides Foundation, and Shared for XCore, they link a library only when it:
+- does no I/O and has nothing to run
+- has no store, transport, device or UI types in its API
+- builds for every platform the app declares
+- is stable enough for its types to appear in models and service protocols
 
-Everything else stays out, with no exception:
-- A store's framework, a provider's SDK, Networking and any framework that reaches the device's capabilities are sources: their types stay in their adapter targets, behind service protocols. That holds where the platform's own guidance reads a store's models from views: the stored models stay in the store's adapter target (`domain.md#data-stored-on-the-device`).
-- SwiftUI and Observation are the UI's, in XUI.
+Before Core imports a library, decide it in this order:
+1. A UI framework, such as SwiftUI, UIKit, AppKit or WatchKit, belongs to XUI, SharedUI or DesignSystem.
+2. Infrastructure is a source: a store's framework, a provider's SDK, Networking and any framework that reaches the device's capabilities. Core declares a service protocol, and an adapter target implements it over the library and keeps its types. That holds where the platform's own guidance reads a store's models from views (`domain.md#data-stored-on-the-device`).
+3. A framework whose macros or protocols the domain's own types would adopt, such as Observation, is a commitment the user makes, as to the standard library. It's recorded with its reason (`decisions.md#recording-a-decision`), and Core then links it like Foundation. A UI framework or infrastructure is never a commitment.
+4. Any other library that meets every criterion is linked like Foundation, a package only once the user agrees (`decisions.md#the-established-approach-first`).
 
 ## Inside a feature
 
@@ -140,7 +143,6 @@ let swiftSettings: [SwiftSetting] = [
     .enableUpcomingFeature("MemberImportVisibility"),
     .enableUpcomingFeature("InternalImportsByDefault"),
     .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
-    .enableUpcomingFeature("InferIsolatedConformances"),
     .strictMemorySafety(),
 ]
 
@@ -148,7 +150,7 @@ let package = Package(
     name: "Catalog",
     defaultLocalization: "en",
     platforms: [
-        .iOS(.v26)
+        .iOS(.v18)
     ],
     products: [
         .library(name: "CatalogCore", targets: ["CatalogCore"]),
@@ -215,20 +217,20 @@ let package = Package(
 )
 ```
 
-- Set `platforms` to the app's deployment target, and the tools version to the team's toolchain, 6.4 or later, whose SDK has the APIs the shapes use.
-- Every target builds in Swift 6 mode with these settings, the defaults Swift is moving to, and a package added later starts from them.
+- `platforms` lists each platform the app runs on at its minimum version, the user's answer (`decisions.md#always-asked`); the movie browser's is iOS 18. The app builds with the latest Xcode and its SDKs, which the agent recommends, Xcode 27 and Swift 6.4 at least, and the tools version is that Xcode's Swift.
+- Every target builds in Swift 6 mode with these settings, and a package added later starts from them. The app target sets the same in its build settings: each feature's `SWIFT_UPCOMING_FEATURE_…` setting and `SWIFT_STRICT_MEMORY_SAFETY`.
 - Access levels and imports follow `style.md#access-control-and-imports`.
-- No package sets `.defaultIsolation(MainActor.self)`: domain types, errors and destinations cross actors, so UI types are marked `@MainActor` instead.
+- No package sets `.defaultIsolation(MainActor.self)`: domain types, errors, destinations and display mappings cross actors, and a type moved between XCore and XUI keeps its isolation, so UI types are marked `@MainActor` instead. The app target, which only composes the UI, keeps Xcode's main-actor default.
 
-## Shared, SharedUI and SharedTMDB
+## The shared package
 
 The shared package mirrors a feature's layers:
 
 | Target | Contains | Imports |
 |---|---|---|
 | `Shared` | `Domain/`: the vocabulary several features share (`MovieSummary`, `Page<Item>`) | Foundation, and what [Core may link](#what-core-may-link) |
-| `SharedUI` | `Components/`: views several features show (`MovieSummaryCard`) and the shared screen states (`ContentUnavailableView.offline(retry:)`) with their copy. `Navigation/`: `SharedDestination` (`navigation.md#shareddestination-sharedui`) | `Shared`, `DesignSystem` |
-| `SharedTMDB`, the API's adapter target | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, `Page+TMDB.swift`), tested in `SharedTMDBTests`. `Services/`: a step on the client that several features' live services share (`domain.md#live-services`) | `Shared`, `Networking` |
+| `SharedUI` | `Components/`: views several features show (`MovieSummaryCard`) and the shared screen states (`ContentUnavailableView.offline(retry:)`) with their copy. `Navigation/`: `SharedDestination` (`navigation.md#shareddestination-sharedui`) | `Shared`, `DesignSystem`, the UI frameworks |
+| `Shared<API>`, an API's adapter target (`SharedTMDB`) | `Mapping/`: an API type's mapping to a Shared model that several features read (`MovieSummary+TMDB.swift`, `Page+TMDB.swift`), tested in `Shared<API>Tests`. `Services/`: a step on the client that several features' live services share (`domain.md#live-services`) | `Shared`, `Networking` |
 
 ```swift
 /// One page of a paginated list, as a service returns it.
@@ -244,18 +246,18 @@ public struct Page<Item: Sendable>: Sendable {
 }
 ```
 
-**The promotion rule.** A type moves into Shared or SharedUI, and a mapping or client step into SharedTMDB, only when a second feature needs the same concept and both copies must change together. It holds both ways: what only one feature uses belongs in that feature, however many of its screens use it. Two types that merely look alike are duplicated; they will diverge.
+**The promotion rule.** A type moves into Shared or SharedUI, and a mapping or client step into `Shared<API>`, only when a second feature needs the same concept and both copies must change together. It holds both ways: what only one feature uses belongs in that feature, however many of its screens use it. Two types that merely look alike are duplicated; they will diverge.
 
 Never in the shared package:
 - Errors, service protocols, ports, live services or stored models; each feature maps the client's errors to its own
 - Navigation types other than `SharedDestination`
 - Environment keys, app state or preferences
-- The API's types outside SharedTMDB
+- An API's types outside its `Shared<API>`
 - "Utils" grab-bags; a helper lives next to the concept it serves
 
 ## DesignSystem
 
-One domain-free package, imported by every UI target, holding the visual language:
+One domain-free package holding the app's own visual language, imported by every UI target. It joins once the app has a token, style or component of its own; until then, the UI targets use the platform's styles. It holds:
 - **Tokens** for color, spacing and type, named as the design names them.
 - **Styles** for native controls, so features keep using `Button` and `NavigationLink` and only pick a style.
 - **Components** that take plain values and `@ContentBuilder` closures, such as a rail or a remote image.
@@ -264,16 +266,16 @@ It never knows a feature model, service, destination or screen, has no strings o
 
 ## Networking and other infrastructure
 
-`Networking` holds the API's types and the app's client over them (`networking.md`). It and any other infrastructure package, such as analytics, are imported by adapter targets, their test targets and the app, never by XCore or XUI.
+`Networking` holds each API's types and the app's client over them (`networking.md`). It and any other infrastructure package, such as analytics, are imported by adapter targets, their test targets and the app, never by XCore or XUI.
 
 They import no feature. What they need from one, such as who is signed in, the app passes in as a closure when it builds their clients.
 
 ## Placing a type
 
-1. Used by one feature, from any of its screens → that feature: XCore for models and contracts, XUI for anything visual or localized, the source's adapter target for mapping.
-2. Needed by a second feature, both changing together → Shared for a model, SharedUI for a view, SharedTMDB for a mapping to a Shared model or a client step both call.
+1. Used by one feature, from any of its screens → that feature: XCore for models and contracts, XUI for view models and anything visual or localized, the source's adapter target for mapping.
+2. Needed by a second feature, both changing together → Shared for a model, SharedUI for a view, `Shared<API>` for a mapping to a Shared model or a client step both call.
 3. Only looks alike → duplicate it.
-4. Visual and domain-free → DesignSystem; talks to the API → Networking; wires features together → the app.
+4. Visual and domain-free → DesignSystem; talks to an API → Networking; wires features together → the app.
 
 ## Localization, assets and fonts
 
@@ -292,7 +294,7 @@ Each feature package builds, previews and tests without the app. Each tested tar
 | Behavior | Tested in |
 |---|---|
 | A screen's own rules: what it loads, its failure rule, paging, stale results (`view-models.md#testing-view-models`) | `XUITests` |
-| Mapping: what a response becomes, and the next page | `XTMDBTests`, and `SharedTMDBTests` for the shared mappings |
+| Mapping: what a response becomes, and the next page | `X<API>Tests`, and `Shared<API>Tests` for the shared mappings |
 | A live service's own rules over the store, such as newest first and no repeats | `X<Store>Tests` |
 | Requests, decoding, error classification and cancellation | `NetworkingTests` |
 | `Destination` mappings that aren't one-to-one, and the app's port adapters | app tests |
@@ -309,8 +311,8 @@ xcode_ci.sh build MoviesApp
 ```
 
 - A package's scheme is `<Package>-Package` when it has several products, and its product's name when it has one.
-- The script runs `xcodebuild` on an installed iPhone simulator and fails on a warning in the repository's own code. It lists a dependency's warning under REVIEW, as a departure to record (`decisions.md#warnings-from-dependencies`).
-- `swift build` and `swift test` build for the Mac, where an iOS-only package's views and view models don't compile.
+- The script runs `xcodebuild` once for each platform the package lists in `platforms`, or the app's scheme supports: on the Mac for macOS, and on an installed simulator for each other platform. It fails on a warning in the repository's own code, and lists a dependency's warning under REVIEW, as a departure to record (`decisions.md#warnings-from-dependencies`).
+- `swift build` and `swift test` build only for the Mac, where a package for other platforms doesn't compile.
 
 ## Checking the boundaries
 
@@ -344,8 +346,8 @@ An app built another way keeps its structure until the user asks to change it. A
 Restructuring moves the app in steps that each leave it building. Copy this checklist into the response:
 
 ```
-- [ ] Map the app: its capabilities (a feature each, by the boundary tests in references/modules.md#defining-features), their screens, and what two features already share
-- [ ] Networking, then DesignSystem, then the shared package with only what two features already share; build the app after each
+- [ ] Map the app: its platforms and their minimum versions, from its project (references/decisions.md#always-asked); its capabilities (a feature each, by the boundary tests in references/modules.md#defining-features), their screens, and what two features already share
+- [ ] Networking if the app calls an API, DesignSystem if it has a visual language of its own, then the shared package with only what two features already share; build the app after each
 - [ ] One feature at a time, the one using the fewest others first so it needs the fewest ports, as in SKILL.md's Add a feature: its reach into other features becomes destinations and ports, and the code still in the app target switches to its public API
 - [ ] As screens leave the app target, their services move into <AppName>App.init and their navigation into Router, Destination, DestinationView and navigationDestinations()
 - [ ] After each step, SKILL.md's Verify; fix and repeat until it passes

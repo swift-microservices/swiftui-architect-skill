@@ -20,14 +20,18 @@ Then:
 - A package is a dependency the user would notice: it's added only once the user agrees, in an adapter target, or in XCore only if `modules.md#what-core-may-link` allows it.
 - When the search finds more than one established option, or leaves open a choice the user would notice, the user is asked. The agent never picks one for them.
 - The design handles what most apps meet. A rare edge case gets a sentence to the user, not code.
-- Without web access, the design stops, and the user is asked to enable it or to supply the sources.
+- Without web access, a security-sensitive design, such as signing in, tokens or credentials kept on the device, cryptography or payments, stops, and the user is asked to enable it or to supply the sources. Any other design proceeds, and the response says it checked no sources.
 
 ## Always asked
 
+- **Platforms**: which platforms the app runs on, and each one's minimum version. An app with a project already answers it in its deployment targets.
 - **Persistence**: whether the app keeps data, where, and whether it syncs.
 - **Authentication**: how users sign in, through what, and where their credentials are kept.
 
-Each is asked before the design that needs it, and this skill names no answer for either. The search for either gathers the established options to put to the user and adopts none: nothing is defaulted, picked or recommended unless the user asks for a recommendation. Once the user answers, the search finds how that answer is built, and the shapes hold it: stored data behind a service protocol (`domain.md#data-stored-on-the-device`), a signed-in account owned by one feature and reached through ports (`domain.md#cross-feature-services-consumer-owned-ports`).
+Each is asked before the design that needs it, and this skill names no answer for persistence or authentication.
+
+- Every shape uses only API that iOS and iPadOS 18, macOS 15, tvOS 18, watchOS 11 and visionOS 2 have, so an app's minimums go as low as those. Each platform's minimum has every API the app uses, as `swiftui-pro` checks; a version too old for one is put back to the user, naming the API it lacks.
+- The search for persistence or authentication gathers the established options to put to the user and adopts none: nothing is defaulted, picked or recommended unless the user asks for a recommendation. Once the user answers, the search finds how that answer is built, and the shapes hold it: stored data behind a service protocol (`domain.md#data-stored-on-the-device`), a signed-in account owned by one feature and reached through ports (`domain.md#cross-feature-services-consumer-owned-ports`).
 
 A requirement outside this skill's scope, such as visual design, accessibility or a target beyond the app, is a question for the user, never an invented shape.
 

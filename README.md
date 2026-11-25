@@ -10,7 +10,7 @@ Ask for a feature, a screen, a link between two features, a move into packages o
 ## The architecture
 
 - **A package per capability.** Each feature owns every screen of its capability and the data behind them. Features never import each other; they meet only in the app, which links their screens and connects their data through small ports.
-- **Boundaries the compiler enforces.** A feature splits into `Core` for its domain, `UI` for view models and views, and an adapter target for each source it reads, such as the API or a store on the device; each tested target has a test target of its own. `Core` imports neither SwiftUI nor the networking client, and each source's types stay in its adapter target, so a crossing fails the build or the skill's boundary script.
+- **Boundaries the compiler enforces.** A feature splits into `Core` for its domain, `UI` for view models and views, and an adapter target for each source it reads, such as the API or a store on the device; each tested target has a test target of its own. `Core` links no UI framework or infrastructure, only libraries that meet its criteria or that you commit to, and each source's types stay in its adapter target, so a crossing fails the build or the skill's boundary script.
 - **A domain shaped for screens.** Models describe what the app shows, not what the API sends, and each feature has errors cased by what its screens tell apart.
 - **Predictable view models.** Data, loading and error for each resource, with the same shapes for paging, keyed loads, search and nested models, and the tests a bug would break.
 - **Native navigation across modules.** Features say where their views go, and the app decides which screen each place shows. By default it's `NavigationStack`, `NavigationLink(value:)` and sheets, with no routers inside features, coordinators or navigation libraries unless you ask for one.
@@ -71,7 +71,7 @@ To add a feature or a screen, link two features, move an app into packages or re
 
 An app built another way keeps its structure until you ask to change it; then the skill moves it into packages one buildable step at a time.
 
-The shapes use Swift 6 language mode and the SDK in Xcode 27 or later (Swift tools 6.4). The package template targets iOS 26; set it to your app's deployment target.
+The shapes build with the latest Xcode and its SDKs, Xcode 27 (Swift 6.4) at least, in Swift 6 language mode, and use only API that iOS 18, macOS 15, tvOS 18, watchOS 11 and visionOS 2 have. The agent asks which platforms your app runs on and their minimum versions, or reads them from your project.
 
 ## What it covers
 
@@ -87,13 +87,13 @@ The shapes use Swift 6 language mode and the SDK in Xcode 27 or later (Swift too
 | Style | How the code reads: building values, errors, concurrency, access and imports, types and values, formatting |
 | Naming | Packages, targets, types, files and folders |
 
-It builds on SwiftUI, Observation and Swift Package Manager. Which API client, store or sign-in an app uses isn't the skill's call: the agent searches for the established approach, asks you about persistence and authentication, and records each pick where your app keeps its decisions.
+It builds on SwiftUI, Observation and Swift Package Manager. Which API client, store or sign-in an app uses isn't the skill's call: the agent searches for the established approach, asks you about platforms, persistence and authentication, and records each pick where your app keeps its decisions.
 
 Not covered: visual design, accessibility, and the technique inside each shape, such as a view's body, an actor's design or a test, which the skills below handle.
 
 ### Works well with
 
-The skill decides the shapes and how the code reads; these skills cover the design before them, a review's security pass and the technique inside them. The agent invokes each where a checklist calls for it, such as the system design skill before a new feature and the testing skill before writing tests, and stops at the start of a task until you install any that are missing. Where one's advice differs, the skill's shapes win.
+The skill decides the shapes and how the code reads; these skills cover the design before them, a review's security pass and the technique inside them. The agent invokes each where a checklist calls for it, such as the system design skill before a new feature and the testing skill before writing tests, and asks you to install one that's missing when a step needs it, carrying on without it if you decline. Where one's advice differs, the skill's shapes win.
 
 - [System Design, Architecture and Code Review](https://github.com/anthropics/knowledge-work-plugins), from Anthropic's Engineering plugin: a feature's requirements and trade-offs, decision records for the choices the skill leaves open, and a review's security, performance and correctness pass
 - [Swift API Design Guidelines](https://github.com/Erikote04/Swift-API-Design-Guidelines-Agent-Skill): names, argument labels and documentation comments for each module's API
@@ -124,7 +124,7 @@ skills/swiftui-architect/
 │   ├── decisions.md         the search before a design, what's always asked, recording picks
 │   └── related-skills.md    the skills for design and technique, and installing them
 └── scripts/                 run, not read
-    ├── xcode_ci.sh          builds or tests a scheme on a simulator, failing on an owned warning
+    ├── xcode_ci.sh          builds or tests a scheme on each platform it declares, failing on an owned warning
     ├── check_boundaries.sh  the boundaries the compiler can't check
     ├── check_style.sh       the style rules a script can see
     └── common.sh            what the two check scripts share
